@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cálculo Dinámico de Vaciado - DML Ingenieros</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔧</text></svg>">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- jsPDF for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="brand-section">
+                <img src="{{ url_for('static', filename='img/LOGO DML INGENIEROS.png') }}" alt="DML Logo"
+                    class="brand-logo">
+                <h1 class="brand-title">Simulador de Vaciado de Tanques</h1>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="dashboard-grid">
+                <!-- Left Column: Visualization (GA1) and Graphs -->
+                <div class="visual-column">
+                    <!-- GA1: Gráfica Animada -->
+                    <div class="win-card" id="ga1-container">
+                        <div class="card-header">
+                            <h2 class="card-title">GA1: Dinámica del Sistema</h2>
+                            <div class="ga1-controls">
+                                <label for="valve-slider">Apertura Válvula: <span id="valve-display">100</span>%</label>
+                                <input type="range" id="valve-slider" min="0" max="100" value="100">
+                            </div>
+                        </div>
+                        <div class="canvas-container">
+                            <canvas id="ga1-canvas"></canvas>
+                        </div>
+                        <!-- Panel de Información de Simulación -->
+                        <div class="sim-info-panel"
+                            style="display: flex; gap: 15px; margin-top: 10px; padding: 10px; background: rgba(20, 25, 40, 0.8); border-radius: 8px; border: 1px solid rgba(96, 205, 255, 0.3);">
+                            <div style="flex: 1;">
+                                <small style="color: #9ca3af;">Volumen Total</small>
+                                <div style="color: #60cfff; font-size: 16px;"><span id="info-vol-total">--</span> m³
+                                </div>
+                            </div>
+                            <div style="flex: 1;">
+                                <small style="color: #9ca3af;">Volumen Actual</small>
+                                <div style="color: #60cfff; font-size: 16px;"><span id="info-vol-initial">--</span> m³
+                                </div>
+                            </div>
+                            <div style="flex: 1;">
+                                <small style="color: #9ca3af;">Tiempo de Vaciado</small>
+                                <div style="color: #00ff88; font-size: 16px;"><span id="info-time">--</span> s</div>
+                            </div>
+                            <div style="flex: 1;">
+                                <small style="color: #9ca3af;">Estado Final</small>
+                                <div style="color: #ffaa00; font-size: 14px;"><span id="info-status">--</span></div>
+                            </div>
+                        </div>
+                        <!-- Alarma de cavitación -->
+                        <div id="alarm-box" class="alarm-hidden">
+                            <strong>ALARMA: CAVITACIÓN</strong>
+                            <p>NPSHa &lt; 1.2 × NPSHr - Bomba detenida</p>
+                            <p>Volumen final: <span id="alarm-volume">0</span> m³ (<span id="alarm-percent">0</span>%)
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Gráfica Nivel vs Tiempo -->
+                    <div class="win-card">
+                        <div class="card-header">
+                            <h2 class="card-title">Nivel del Tanque vs Tiempo</h2>
+                        </div>
+                        <canvas id="levelChart"></canvas>
+                    </div>
+
+                    <!-- Tabla de Válvula -->
+                    <div class="win-card">
+                        <div class="card-header">
+                            <h2 class="card-title">Datos de Válvula</h2>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Cv</th>
+                                        <th>ΔP (bar)</th>
+                                        <th>Q (m³/h)</th>
+                                        <th>Condición</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="valve-table-body">
+                                    <tr>
+                                        <td colspan="4">Ejecute simulación</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Resultados Completa -->
+                    <div class="win-card">
+                        <div class="card-header">
+                            <h2 class="card-title">Resultados de Simulación</h2>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>t (s)</th>
+                                        <th>Nivel (m)</th>
+                                        <th>Vol (m³)</th>
+                                        <th>Q (m³/h)</th>
+                                        <th>v (m/s)</th>
+                                        <th>ΔP suc (bar)</th>
+                                        <th>ΔP valv (bar)</th>
+                                        <th>P suc (bar)</th>
+                                        <th>NPSHa</th>
+                                        <th>NPSHr</th>
+                                        <th>ΔP desc (bar)</th>
+                                        <th>TDH (m)</th>
+                                        <th>Pot (kW)</th>
+                                        <th>ΔP (bar)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="results-body">
+                                    <tr>
+                                        <td colspan="14">Ejecute simulación</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Control Panel & Inputs -->
+                <div class="input-column">
+                    <div class="win-card">
+                        <div class="card-header">
+                            <h2 class="card-title">Parámetros de Entrada</h2>
+                        </div>
+                        <form id="simulation-form">
+                            <!-- Section: Project Information -->
+                            <div class="form-section"
+                                style="background: rgba(96, 205, 255, 0.05); padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+                                <h3 class="section-title" style="color: #ffaa00;">📋 Información del Proyecto</h3>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="project_code">Código del Proyecto</label>
+                                        <input type="text" id="project_code" name="project_code" value="P10-06"
+                                            placeholder="Ej: P10-06">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="project_name">Nombre del Proyecto</label>
+                                        <input type="text" id="project_name" name="project_name" value=""
+                                            placeholder="Ej: Sistema CIP Planta">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="doc_code">Código del Documento</label>
+                                        <input type="text" id="doc_code" name="doc_code" value=""
+                                            placeholder="Ej: DML-CAL-001">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="analyst_name">Nombre del Analista</label>
+                                        <input type="text" id="analyst_name" name="analyst_name" value=""
+                                            placeholder="Nombre completo">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="doc_date">Fecha de Elaboración</label>
+                                        <input type="date" id="doc_date" name="doc_date">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="doc_revision">Revisión</label>
+                                        <input type="text" id="doc_revision" name="doc_revision" value="Rev. 0"
+                                            placeholder="Ej: Rev. 0">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 0: Site Conditions -->
+                            <div class="form-section">
+                                <h3 class="section-title">0. Condiciones del Sitio</h3>
+                                <div class="form-group">
+                                    <label for="altitude">Altitud sobre nivel del mar (m)</label>
+                                    <input type="number" id="altitude" step="1" name="altitude" value="0" min="0"
+                                        max="5000" required>
+                                    <small class="field-hint">Para corrección de presión atmosférica en NPSH</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="patm_corrected">P<sub>atm</sub> corregida (bar abs)</label>
+                                    <input type="text" id="patm_corrected" value="1.013" readonly
+                                        class="readonly-field">
+                                </div>
+                            </div>
+
+                            <!-- Section 0: Calculation Mode -->
+                            <div class="form-section">
+                                <h3 class="section-title">0. Modo de Cálculo</h3>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="calc_mode">Modo de Operación</label>
+                                        <select id="calc_mode" name="calc_mode"
+                                            onchange="toggleCalcMode(); togglePumpInputs();">
+                                            <option value="pressure_fixed" selected>Presión Destino Fija (Q Variable)
+                                            </option>
+                                            <option value="flow_fixed">Flujo Fijo (Q Fijo)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" id="fixed_flow_group" style="display: none;">
+                                        <label for="fixed_flow_rate">Flujo Fijo (m³/h)</label>
+                                        <input type="number" id="fixed_flow_rate" step="0.1" name="fixed_flow_rate"
+                                            value="50.0">
+                                        <small class="field-hint">Caudal forzado para simulación</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 1: Tank Geometry -->
+                            <div class="form-section">
+                                <h3 class="section-title">1. Geometría del Tanque</h3>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="tank_diameter">Diámetro (m)</label>
+                                        <input type="number" id="tank_diameter" step="0.01" name="tank_diameter"
+                                            value="3.0" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="tank_height">Altura Recta (m)</label>
+                                        <input type="number" id="tank_height" step="0.01" name="tank_height" value="5.0"
+                                            required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="initial_level">Nivel Inicial (m)</label>
+                                        <input type="number" step="0.01" name="initial_level" id="initial_level"
+                                            value="4.5" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="occupation_percent">% Ocupación</label>
+                                        <input type="text" id="occupation_percent" value="--" readonly
+                                            class="readonly-field">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="volume_initial">Volumen Inicial (m³)</label>
+                                        <input type="text" id="volume_initial" value="--" readonly
+                                            class="readonly-field">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="volume_total">Volumen Total (m³)</label>
+                                        <input type="text" id="volume_total" value="--" readonly class="readonly-field">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="nozzle_diameter">Diám. Boquilla Salida (pulg)</label>
+                                    <select name="nozzle_diameter" id="nozzle_diameter">
+                                        <option value="2">2"</option>
+                                        <option value="3">3"</option>
+                                        <option value="4" selected>4"</option>
+                                        <option value="6">6"</option>
+                                        <option value="8">8"</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Section 2: Piping -->
+                            <div class="form-section">
+                                <h3 class="section-title">2. Tubería de Succión</h3>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="pipe_standard">Norma</label>
+                                        <select name="pipe_standard" id="pipe_standard">
+                                            <option value="ANSI_SCH40">ANSI Sch 40</option>
+                                            <option value="BPE">ASME BPE</option>
+                                            <option value="DIN_11850_R2">DIN 11850</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="pipe_size">Diámetro</label>
+                                        <select name="pipe_size" id="pipe_size">
+                                            <option value="4.0" selected>4"</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="pipe_length">Longitud (m)</label>
+                                        <input type="number" id="pipe_length" step="0.1" name="pipe_length" value="10.0"
+                                            required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="height_to_pump">Altura a Bomba (m)</label>
+                                        <input type="number" id="height_to_pump" step="0.1" name="height_to_pump"
+                                            value="2.0" required>
+                                    </div>
+                                </div>
+                                <!-- Accesorios -->
+                                <label class="section-subtitle">Accesorios:</label>
+                                <div class="accessories-grid">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="acc_elbow90" checked> Codo 90° (<span
+                                            id="qty_elbow90">2</span>)
+                                        <input type="number" class="qty-input" id="input_elbow90" value="2" min="0"
+                                            max="10">
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="acc_elbow45"> Codo 45° (<span
+                                            id="qty_elbow45">0</span>)
+                                        <input type="number" class="qty-input" id="input_elbow45" value="0" min="0"
+                                            max="10">
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="acc_tee"> Tee (<span id="qty_tee">0</span>)
+                                        <input type="number" class="qty-input" id="input_tee" value="0" min="0"
+                                            max="10">
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="acc_filter" checked> Filtro
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="acc_reduction" checked> Reducción Exc.
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="acc_expansion"> Ampliación
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Section 3: Valve -->
+                            <div class="form-section">
+                                <h3 class="section-title">3. Válvula</h3>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="valve_type">Tipo</label>
+                                        <select name="valve_type" id="valve_type">
+                                            <option value="MARIPOSA">Mariposa</option>
+                                            <option value="BOLA">Bola</option>
+                                            <option value="COMPUERTA">Compuerta</option>
+                                            <option value="DIAFRAGMA">Diafragma</option>
+                                            <option value="GLOBO">Globo</option>
+                                            <option value="MIXPROOF">Mixproof</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="valve_open">Apertura (%)</label>
+                                        <input type="number" id="valve_open" name="valve_open" value="100" min="0"
+                                            max="100">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 4: Pump -->
+                            <div class="form-section">
+                                <h3 class="section-title">4. Bomba</h3>
+                                <div class="form-group">
+                                    <label for="pump_type">Tipo de Bomba</label>
+                                    <select name="pump_type" id="pump_type">
+                                        <option value="centrifuga">Centrífuga</option>
+                                        <option value="desplazamiento">Desplazamiento Positivo</option>
+                                    </select>
+                                </div>
+
+                                <!-- Curva completa (modo Presión Fija) -->
+                                <div id="pump-curve-section">
+                                    <label class="section-subtitle">Curva Q vs TDH (5 puntos):</label>
+                                    <div class="pump-curve-inputs">
+                                        <div class="curve-row header-row">
+                                            <span>Q (m³/h)</span><span>TDH (m)</span><span>NPSHr (m)</span>
+                                        </div>
+                                        <div class="curve-row">
+                                            <input type="number" name="q1" value="0" step="0.1">
+                                            <input type="number" name="tdh1" value="45" step="0.1">
+                                            <input type="number" name="npshr1" value="1.0" step="0.1">
+                                        </div>
+                                        <div class="curve-row">
+                                            <input type="number" name="q2" value="20" step="0.1">
+                                            <input type="number" name="tdh2" value="43" step="0.1">
+                                            <input type="number" name="npshr2" value="1.2" step="0.1">
+                                        </div>
+                                        <div class="curve-row">
+                                            <input type="number" name="q3" value="40" step="0.1">
+                                            <input type="number" name="tdh3" value="40" step="0.1">
+                                            <input type="number" name="npshr3" value="1.5" step="0.1">
+                                        </div>
+                                        <div class="curve-row">
+                                            <input type="number" name="q4" value="60" step="0.1">
+                                            <input type="number" name="tdh4" value="35" step="0.1">
+                                            <input type="number" name="npshr4" value="2.0" step="0.1">
+                                        </div>
+                                        <div class="curve-row">
+                                            <input type="number" name="q5" value="80" step="0.1">
+                                            <input type="number" name="tdh5" value="28" step="0.1">
+                                            <input type="number" name="npshr5" value="3.0" step="0.1">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Punto único (modo Flujo Fijo) -->
+                                <div id="pump-point-section" style="display: none;">
+                                    <label class="section-subtitle">Punto de Operación (Flujo Fijo):</label>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="pump_flow">Flujo (m³/h)</label>
+                                            <input type="number" id="pump_flow" name="pump_flow" value="50.0" step="0.1"
+                                                min="0.1">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="pump_npshr_single">NPSHr (m)</label>
+                                            <input type="number" id="pump_npshr_single" name="pump_npshr_single"
+                                                value="2.0" step="0.1">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="pump_efficiency">Eficiencia (%)</label>
+                                            <input type="number" id="pump_efficiency" name="pump_efficiency"
+                                                value="75.0" step="0.1" min="1" max="100">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 5: Discharge Line -->
+                            <div class="form-section">
+                                <h3 class="section-title">5. Línea de Descarga</h3>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="discharge_pipe_size">Diámetro Tubería</label>
+                                        <select name="discharge_pipe_size" id="discharge_pipe_size">
+                                            <option value="2.0">2"</option>
+                                            <option value="3.0">3"</option>
+                                            <option value="4.0" selected>4"</option>
+                                            <option value="6.0">6"</option>
+                                            <option value="8.0">8"</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="discharge_length">Long. Equivalente (m)</label>
+                                        <input type="number" id="discharge_length" step="0.1" name="discharge_length"
+                                            value="20.0" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="discharge_height">Altura Estática (m)</label>
+                                        <input type="number" id="discharge_height" step="0.1" name="discharge_height"
+                                            value="10.0" required>
+                                        <small class="field-hint">Altura vertical a vencer</small>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="discharge_pressure">Presión Objetivo (bar g)</label>
+                                        <input type="number" id="discharge_pressure" step="0.1"
+                                            name="discharge_pressure" value="2.0" required>
+                                        <small class="field-hint">Presión requerida en destino</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 6: Fluid Properties -->
+                            <div class="form-section">
+                                <h3 class="section-title">6. Propiedades del Fluido</h3>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="fluid_density">Densidad (kg/m³)</label>
+                                        <input type="number" id="fluid_density" step="0.1" name="fluid_density"
+                                            value="998" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="fluid_viscosity">Viscosidad (cP)</label>
+                                        <input type="number" id="fluid_viscosity" step="0.01" name="fluid_viscosity"
+                                            value="1.0" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="fluid_vapor_pressure">Presión de Vapor (bar abs)</label>
+                                    <input type="number" id="fluid_vapor_pressure" step="0.001"
+                                        name="fluid_vapor_pressure" value="0.032" required>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn-primary">Iniciar Simulación</button>
+                            <button type="button" class="btn-secondary" id="btn-reset"
+                                style="margin-top: 0.5rem; background: #374151; border: 1px solid #555;">🔄 Nueva
+                                Simulación</button>
+                            <button type="button" class="btn-secondary" id="btn-export-csv"
+                                style="margin-top: 0.5rem; background: #1e5128; border: 1px solid #2d8b41;">📊 Exportar
+                                CSV</button>
+                            <button type="button" class="btn-secondary" id="btn-export-pdf"
+                                style="margin-top: 0.5rem; background: #8b1a1a; border: 1px solid #b22222;">📄 Generar
+                                PDF</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>&copy; 2026 DML Ingenieros Consultores</p>
+            <p>Author: <span class="author-credit">Jonathan Arboleda Genes</span>, MSc Chemical Engineering</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>

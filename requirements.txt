@@ -1,2 +1,5 @@
-flask
-numpy
+# DML Ingenieros - Simulador de Vaciado de Tanques
+# Dependencias Python con versiones fijas
+
+Flask==3.0.0
+numpy==1.26.3
