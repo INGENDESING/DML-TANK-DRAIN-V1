@@ -25,6 +25,25 @@ document.addEventListener('DOMContentLoaded', () => {
     let minLevelIndex = -1;
     let flowParticles = [];
 
+    // === FUNCIÓN DE MOSTRAR ERROR INLINE ===
+    function showError(message) {
+        const errorDiv = document.getElementById('error-message');
+        const errorText = document.getElementById('error-text');
+        if (errorDiv && errorText) {
+            errorText.textContent = message;
+            errorDiv.style.display = 'block';
+            // Auto-scroll al error
+            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+            alert(message);
+        }
+    }
+
+    function hideError() {
+        const errorDiv = document.getElementById('error-message');
+        if (errorDiv) errorDiv.style.display = 'none';
+    }
+
     // === FUNCIÓN DE RESETEO ===
     function resetSimulation() {
         // Detener animación
@@ -55,14 +74,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Limpiar tablas
-        document.getElementById('results-body').innerHTML = '<tr><td colspan="12">Ejecute simulación</td></tr>';
+        document.getElementById('results-body').innerHTML = '<tr><td colspan="16">Ejecute simulación</td></tr>';
         document.getElementById('valve-table-body').innerHTML = '<tr><td colspan="4">Ejecute simulación</td></tr>';
 
-        // Limpiar gráfico
+        // Limpiar gráficos
         levelChart.data.labels = [];
         levelChart.data.datasets[0].data = [];
         levelChart.data.datasets[1].data = [];
         levelChart.update();
+
+        pumpChart.data.datasets[0].data = [];
+        pumpChart.data.datasets[1].data = [];
+        pumpChart.update();
 
         // Limpiar canvas GA1
         const dpr = window.devicePixelRatio || 1;
@@ -93,13 +116,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // === FUNCIÓN EXPORTAR CSV ===
     function exportToCSV() {
         if (!simulationData || simulationData.length === 0) {
-            alert('No hay datos de simulación para exportar. Ejecute una simulación primero.');
+            showError('No hay datos de simulación para exportar. Ejecute una simulación primero.');
             return;
         }
 
         // Cabeceras CSV
         const headers = [
             't (s)', 'Nivel (m)', 'Volumen (m³)', 'Q (m³/h)', 'v (m/s)',
+            'Re', 'Régimen', 'f (Darcy)',
             'ΔP suc (bar)', 'ΔP valv (bar)', 'P suc (bar)', 'NPSHa (m)', 'NPSHr (m)',
             'ΔP desc (bar)', 'TDH (m)', 'Potencia (kW)', 'ΔP total (bar)', 'Cv', 'Alarma'
         ];
@@ -111,6 +135,9 @@ document.addEventListener('DOMContentLoaded', () => {
             p.volume.toFixed(3),
             p.flow_m3h.toFixed(3),
             p.velocity_ms.toFixed(3),
+            (p.reynolds || 0).toFixed(0),
+            p.flow_regime || '--',
+            (p.friction_factor || 0).toFixed(6),
             (p.dp_pipe || 0).toFixed(5),
             (p.dp_valve || 0).toFixed(5),
             p.pressure_suction_bar.toFixed(4),
@@ -162,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // === FUNCIÓN EXPORTAR PDF ===
     function exportToPDF() {
         if (!simulationData || simulationData.length === 0) {
-            alert('No hay datos de simulación para exportar. Ejecute una simulación primero.');
+            showError('No hay datos de simulación para exportar. Ejecute una simulación primero.');
             return;
         }
 
@@ -389,6 +416,73 @@ document.addEventListener('DOMContentLoaded', () => {
         btnExportPDF.addEventListener('click', exportToPDF);
     }
 
+    // === GUARDAR/CARGAR CONFIGURACIÓN ===
+    const STORAGE_KEY = 'dml_tank_sim_config';
+
+    function saveConfig() {
+        const formData = new FormData(form);
+        const config = {};
+        for (const [key, value] of formData.entries()) {
+            config[key] = value;
+        }
+        // Guardar checkboxes explícitamente (FormData no incluye unchecked)
+        ['acc_elbow90', 'acc_elbow45', 'acc_tee', 'acc_filter', 'acc_reduction', 'acc_expansion'].forEach(name => {
+            const el = form.querySelector(`[name="${name}"]`);
+            if (el) config[name] = el.checked;
+        });
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+            alert('Configuración guardada exitosamente.');
+        } catch (e) {
+            alert('Error al guardar configuración.');
+        }
+    }
+
+    function loadConfig() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) {
+                alert('No hay configuración guardada.');
+                return;
+            }
+            const config = JSON.parse(raw);
+            // Restaurar inputs y selects
+            for (const [key, value] of Object.entries(config)) {
+                const el = form.querySelector(`[name="${key}"]`);
+                if (!el) continue;
+                if (el.type === 'checkbox') {
+                    el.checked = value === true || value === 'on';
+                } else {
+                    el.value = value;
+                }
+            }
+            // Actualizar campos derivados
+            updateTankFields();
+            updatePatmDisplay();
+            updatePipeSizes();
+            // Actualizar cantidades de accesorios
+            ['elbow90', 'elbow45', 'tee'].forEach(acc => {
+                const input = document.getElementById('input_' + acc);
+                const span = document.getElementById('qty_' + acc);
+                if (input && span) span.textContent = input.value;
+            });
+            // Actualizar modo de cálculo
+            if (typeof toggleCalcMode === 'function') toggleCalcMode();
+            if (typeof togglePumpInputs === 'function') togglePumpInputs();
+            // Actualizar slider de válvula
+            valveSlider.value = form.valve_open.value;
+            valveDisplay.textContent = form.valve_open.value;
+            alert('Configuración cargada exitosamente.');
+        } catch (e) {
+            alert('Error al cargar configuración.');
+        }
+    }
+
+    const btnSaveConfig = document.getElementById('btn-save-config');
+    const btnLoadConfig = document.getElementById('btn-load-config');
+    if (btnSaveConfig) btnSaveConfig.addEventListener('click', saveConfig);
+    if (btnLoadConfig) btnLoadConfig.addEventListener('click', loadConfig);
+
     // === CALCULADORA DE VOLUMEN DEL TANQUE ===
     const volumeInitialDisplay = document.getElementById('volume_initial');
     const volumeTotalDisplay = document.getElementById('volume_total');
@@ -530,6 +624,84 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // === INICIALIZAR GRÁFICA BOMBA VS SISTEMA ===
+    const pumpChartCanvas = document.getElementById('pumpChart');
+    const pumpChart = new Chart(pumpChartCanvas.getContext('2d'), {
+        type: 'scatter',
+        data: {
+            datasets: [
+                {
+                    label: 'Puntos de Operación (Q vs TDH)',
+                    data: [],
+                    borderColor: COLORS.accent,
+                    backgroundColor: 'rgba(96, 205, 255, 0.3)',
+                    pointRadius: 3,
+                    showLine: true,
+                    tension: 0.3,
+                    borderWidth: 2
+                },
+                {
+                    label: 'Curva de Bomba',
+                    data: [],
+                    borderColor: '#00ff88',
+                    backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                    pointRadius: 5,
+                    pointStyle: 'triangle',
+                    showLine: true,
+                    tension: 0.3,
+                    borderWidth: 2,
+                    borderDash: [5, 5]
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { color: COLORS.textSecondary } }
+            },
+            scales: {
+                x: {
+                    title: { display: true, text: 'Caudal Q (m³/h)', color: COLORS.textSecondary },
+                    grid: { color: '#333' },
+                    ticks: { color: COLORS.textSecondary }
+                },
+                y: {
+                    title: { display: true, text: 'TDH (m)', color: COLORS.textSecondary },
+                    grid: { color: '#333' },
+                    ticks: { color: COLORS.textSecondary },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    function updatePumpChart(data) {
+        // Puntos de operación Q vs TDH de la simulación
+        const step = Math.max(1, Math.floor(data.length / 30));
+        const operatingPoints = data
+            .filter((_, i) => i % step === 0 || i === data.length - 1)
+            .map(p => ({ x: p.flow_m3h, y: p.pump_head_m || 0 }));
+
+        pumpChart.data.datasets[0].data = operatingPoints;
+
+        // Curva de bomba (si estamos en modo pressure_fixed, usar los puntos de la curva del formulario)
+        const calcMode = document.getElementById('calc_mode').value;
+        if (calcMode === 'pressure_fixed') {
+            const pumpCurvePoints = [];
+            for (let i = 1; i <= 5; i++) {
+                const q = parseFloat(document.querySelector(`[name="q${i}"]`)?.value) || 0;
+                const tdh = parseFloat(document.querySelector(`[name="tdh${i}"]`)?.value) || 0;
+                pumpCurvePoints.push({ x: q, y: tdh });
+            }
+            pumpChart.data.datasets[1].data = pumpCurvePoints;
+        } else {
+            pumpChart.data.datasets[1].data = [];
+        }
+
+        pumpChart.update();
+    }
+
     // === CALCULAR PRESIÓN ATMOSFÉRICA POR ALTITUD ===
     function calculatePatm(altitude) {
         // Fórmula barométrica: P = 101325 × (1 - 2.25577×10⁻⁵ × h)^5.25588
@@ -635,7 +807,9 @@ document.addEventListener('DOMContentLoaded', () => {
             pipe_size: data.discharge_pipe_size,
             length: parseFloat(data.discharge_length) || 20,
             height: parseFloat(data.discharge_height) || 10,
-            pressure: parseFloat(data.discharge_pressure) || 2
+            pressure: parseFloat(data.discharge_pressure) || 2,
+            elbow90: parseInt(data.discharge_elbow90) || 2,
+            check_valve: parseInt(data.discharge_check_valve) || 1
         };
 
         try {
@@ -648,9 +822,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
 
             if (result.error) {
-                alert('Error: ' + result.error);
+                showError(result.error);
                 return;
             }
+            hideError();
 
             simulationData = result.results;
             tankMeta = result.tank_meta;
@@ -683,7 +858,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             updateChart(simulationData, result.min_level);
+            updatePumpChart(simulationData);
             updateTables(simulationData);
+            updateHydraulicSummary(simulationData);
             initFlowParticles();
             startAnimation(simulationData);
 
@@ -696,12 +873,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error(error);
-            alert('Error de conexión con el servidor');
+            showError('Error de conexión con el servidor. Verifique que el servidor esté corriendo.');
         } finally {
             submitBtn.disabled = false;
             submitBtn.textContent = 'Iniciar Simulación';
         }
     });
+
+    // === RESUMEN HIDRÁULICO ===
+    function updateHydraulicSummary(data) {
+        const panel = document.getElementById('hydraulic-summary-panel');
+        const tbody = document.getElementById('hydraulic-summary-body');
+        if (!panel || !tbody || !data || data.length === 0) return;
+
+        // Calcular promedios y valores relevantes
+        const avgFriction = data.reduce((s, p) => s + (p.friction_factor || 0), 0) / data.length;
+        const avgReynolds = data.reduce((s, p) => s + (p.reynolds || 0), 0) / data.length;
+        const maxVelocity = Math.max(...data.map(p => p.velocity_ms));
+        const avgFlow = data.reduce((s, p) => s + p.flow_m3h, 0) / data.length;
+
+        // Obtener parámetros del formulario
+        const pipeStd = document.getElementById('pipe_standard')?.value || '--';
+        const pipeSize = document.getElementById('pipe_size')?.value || '--';
+        const kAccSuc = document.getElementById('input_elbow90')?.value * 0.3
+                      + document.getElementById('input_elbow45')?.value * 0.2
+                      + document.getElementById('input_tee')?.value * 1.0
+                      + (form.acc_filter?.checked ? 2.0 : 0)
+                      + (form.acc_reduction?.checked ? 0.5 : 0)
+                      + (form.acc_expansion?.checked ? 0.2 : 0)
+                      + 0.5; // Entrada tanque
+        const kAccDesc = (parseInt(document.getElementById('discharge_elbow90')?.value) || 2) * 0.3
+                       + (parseInt(document.getElementById('discharge_check_valve')?.value) || 1) * 2.0;
+
+        const rows = [
+            ['Tubería Succión', `${pipeStd} ${pipeSize}`],
+            ['K total acc. succión', kAccSuc.toFixed(2)],
+            ['K total acc. descarga', kAccDesc.toFixed(2)],
+            ['Re promedio', avgReynolds.toFixed(0)],
+            ['f Darcy promedio', avgFriction.toFixed(6)],
+            ['Velocidad máx. suc.', `${maxVelocity.toFixed(2)} m/s`],
+            ['Caudal promedio', `${avgFlow.toFixed(2)} m³/h`],
+        ];
+
+        tbody.innerHTML = rows.map(([label, value]) =>
+            `<tr><td style="color:#9ca3af;">${label}</td><td style="color:#60cfff; text-align:right;">${value}</td></tr>`
+        ).join('');
+
+        panel.style.display = 'block';
+    }
 
     // === ACTUALIZAR GRÁFICO ===
     function updateChart(data, minLevel) {
@@ -747,6 +966,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${p.volume.toFixed(2)}</td>
                     <td>${p.flow_m3h.toFixed(2)}</td>
                     <td class="${velStatus}">${p.velocity_ms.toFixed(2)}</td>
+                    <td>${(p.reynolds || 0).toFixed(0)}</td>
+                    <td>${p.flow_regime || '--'}</td>
                     <td>${(p.dp_pipe || 0).toFixed(4)}</td>
                     <td>${(p.dp_valve || 0).toFixed(4)}</td>
                     <td>${p.pressure_suction_bar.toFixed(3)}</td>
@@ -762,20 +983,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Tabla de válvula
-        const valveBody = document.getElementById('valve-table-body');
+        // Tabla de válvula - mostrar primer punto (se actualiza dinámicamente en animación)
         if (data.length > 0) {
-            const p = data[0];
-            const condition = (p.dp_valve || 0) > 0.5 ? 'Alta ΔP' : 'Normal';
-            valveBody.innerHTML = `
-                <tr>
-                    <td>${(p.cv || 0).toFixed(1)}</td>
-                    <td>${(p.dp_valve || 0).toFixed(4)}</td>
-                    <td>${p.flow_m3h.toFixed(2)}</td>
-                    <td>${condition}</td>
-                </tr>
-            `;
+            updateValveTable(data[0]);
         }
+    }
+
+    // Función para actualizar tabla de válvula con un punto de datos
+    function updateValveTable(p) {
+        const valveBody = document.getElementById('valve-table-body');
+        if (!valveBody || !p) return;
+        const condition = (p.dp_valve || 0) > 0.5 ? 'Alta ΔP' : 'Normal';
+        valveBody.innerHTML = `
+            <tr>
+                <td>${(p.cv || 0).toFixed(1)}</td>
+                <td>${(p.dp_valve || 0).toFixed(4)}</td>
+                <td>${p.flow_m3h.toFixed(2)}</td>
+                <td>${condition}</td>
+            </tr>
+        `;
     }
 
 
@@ -828,6 +1054,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Actualizar tiempo transcurrido
                 if (infoTime) infoTime.textContent = currentState.time.toFixed(0);
+
+                // Actualizar tabla de válvula con datos del frame actual
+                updateValveTable(currentState);
 
                 // Actualizar estado dinámicamente
                 if (infoStatus) {
@@ -1060,7 +1289,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         color: state.velocity_ms > 3 ? '#ff4444' : state.velocity_ms > 1.8 ? '#ffaa00' : '#00ff88'
                     },
                     { label: 'Caudal', value: `${(state.flow_m3h || 0).toFixed(1)} m³/h` },
-                    { label: 'ΔP Tubería', value: `${(state.dp_pipe || 0).toFixed(3)} bar` }
+                    { label: 'Re', value: `${(state.reynolds || 0).toFixed(0)}` },
+                    { label: 'Régimen', value: state.flow_regime || '--', color: state.flow_regime === 'Turbulento' ? '#00ff88' : state.flow_regime === 'Laminar' ? '#ffaa00' : '#ff9900' },
+                    { label: 'P desc', value: `${(state.pressure_discharge_bar || 0).toFixed(2)} bar` }
                 ]
             },
             {
@@ -1850,13 +2081,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // === LOGICA DE MODO DE CALCULO ===
-window.toggleCalcMode = function () {
-    const mode = document.getElementById('calc_mode').value;
-    const flowGroup = document.getElementById('fixed_flow_group');
-    if (flowGroup) {
-        flowGroup.style.display = (mode === 'flow_fixed') ? 'block' : 'none';
-    }
-};
+// function toggleCalcMode removed as input was deleted
 
 // Toggle de inputs de bomba según modo
 window.togglePumpInputs = function () {
@@ -1876,8 +2101,8 @@ window.togglePumpInputs = function () {
 document.addEventListener('DOMContentLoaded', () => {
     const calcModeSelect = document.getElementById('calc_mode');
     if (calcModeSelect) {
-        toggleCalcMode();
+        // toggleCalcMode(); // Removed
         togglePumpInputs();
-        calcModeSelect.addEventListener('change', toggleCalcMode);
+        calcModeSelect.addEventListener('change', togglePumpInputs); // Only toggle pump inputs
     }
 });

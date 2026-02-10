@@ -35,6 +35,9 @@ VALIDATION_RANGES = {
     'fluid_vapor_pressure': (0.0, 10.0),  # bar abs
     'valve_open': (0, 100),
     'pump_flow': (0.1, 5000),  # m³/h - para modo flow_fixed
+    'pump_npshr_single': (0.1, 10.0),
+    'pump_efficiency': (1, 100),
+    'nozzle_diameter': (1, 48),  # Pulgadas
 }
 
 def validate_input(key, value):
@@ -71,6 +74,19 @@ def run_simulation():
         if calc_mode == 'flow_fixed' and 'pump_flow' in data:
             if not validate_input('pump_flow', data['pump_flow']):
                 validation_errors.append("pump_flow fuera de rango")
+            
+            # Validate other pump fixed parameters
+            if 'pump_npshr_single' in data and not validate_input('pump_npshr_single', data['pump_npshr_single']):
+                 validation_errors.append("pump_npshr_single fuera de rango")
+            
+            if 'pump_efficiency' in data and not validate_input('pump_efficiency', data['pump_efficiency']):
+                 validation_errors.append("pump_efficiency fuera de rango")
+
+        # Validate nozzle diameter
+        if 'nozzle_diameter' in data:
+             # Check if it's in the allowed list or range (using range for now based on VALIDATION_RANGES)
+             if not validate_input('nozzle_diameter', data['nozzle_diameter']):
+                 validation_errors.append("nozzle_diameter fuera de rango")
 
         if validation_errors:
             return jsonify({"error": "Validación: " + "; ".join(validation_errors)}), 400
@@ -84,6 +100,7 @@ def run_simulation():
         tank_height = float(data.get('tank_height', 5.0))
         init_level = float(data.get('initial_level', 4.5))
         nozzle_diam = float(data.get('nozzle_diameter', 4))
+        head_type = data.get('head_type', 'ASME_FD')
 
         # Tubería de succión
         pipe_std = data.get('pipe_standard', 'ANSI_SCH40')
@@ -130,7 +147,7 @@ def run_simulation():
         fluid = Fluid(fluid_density, fluid_viscosity, fluid_vapor_pressure)
 
         # Tanque
-        tank = Tank(tank_diam, tank_height)
+        tank = Tank(tank_diam, tank_height, head_type=head_type)
 
         # Tubería
         pipe_id = get_pipe_id(pipe_std, pipe_size)
@@ -166,12 +183,20 @@ def run_simulation():
             discharge_pipe_id = pipe_id  # Usar mismo diámetro si no se encuentra
             # Warning silencioso: se puede loggear pero no interrumpir la simulación
 
+        # Calcular K de accesorios de descarga
+        discharge_elbow90 = int(discharge_data.get('elbow90', 2))
+        discharge_check_valve = int(discharge_data.get('check_valve', 1))
+        k_discharge_fittings = discharge_elbow90 * 0.3  # Codos 90°
+        if discharge_check_valve:
+            k_discharge_fittings += 2.0  # Válvula check (swing)
+
         discharge_specs = {
             "length": discharge_length,
             "id": discharge_pipe_id,
             "roughness": pipe_roughness,  # Critical: Required for friction calculation
             "height": discharge_height,
-            "pressure_bar": discharge_pressure
+            "pressure_bar": discharge_pressure,
+            "k_fittings": k_discharge_fittings
         }
 
         # Válvula
@@ -209,8 +234,8 @@ def run_simulation():
         # Establecer altitud para corrección de presión atmosférica
         sim.set_altitude(altitude)
 
-        max_steps = 2000
-        dt = 2.0
+        max_steps = 8000
+        dt = 0.5
         results = []
         min_level = None
         min_level_index = -1

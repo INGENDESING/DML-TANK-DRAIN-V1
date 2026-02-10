@@ -110,8 +110,9 @@ class Simulation:
             re_dis = calculate_reynolds(self.fluid.rho, vel_dis, self.discharge['id'], self.fluid.mu)
             f_dis = calculate_friction_factor(re_dis, self.discharge['roughness'], self.discharge['id'])
             h_loss_discharge = calculate_head_loss_pipe(f_dis, self.discharge['length'], self.discharge['id'], vel_dis)
-            # Asumimos 2 codos y válvula check en descarga (k approx 3.0) si no se especifica
-            h_loss_discharge += calculate_head_loss_fittings(3.0, vel_dis)
+            # Usar K de accesorios de descarga (configurable desde frontend)
+            k_discharge = self.discharge.get('k_fittings', 2.6)  # Default: 2 codos + check
+            h_loss_discharge += calculate_head_loss_fittings(k_discharge, vel_dis)
 
         # --- 3. RESULTADOS DE PRESIÓN ---
         
@@ -177,12 +178,23 @@ class Simulation:
         self.current_level = self._solve_level_from_vol(self.current_vol)
         self.time += dt
 
+        # Determinar régimen de flujo
+        if re_suction < 2300:
+            flow_regime = "Laminar"
+        elif re_suction < 4000:
+            flow_regime = "Transición"
+        else:
+            flow_regime = "Turbulento"
+
         state = {
             "time": self.time,
             "level": self.current_level,
             "volume": self.current_vol,
             "flow_m3h": simulation_flow_m3_h,
             "velocity_ms": vel_suction,
+            "reynolds": re_suction,
+            "flow_regime": flow_regime,
+            "friction_factor": f_suction,
             "pressure_suction_bar": p_suction_bar,
             "pressure_discharge_bar": p_dest_bar_result, # Resultado en destino
             "pressure_diff_bar": pressure_diff_bar,
@@ -268,8 +280,8 @@ class Simulation:
 
         # Si la bomba puede más que el sistema incluso al máximo
         if res_max > 0:
-            logger.debug(f'Solver: Bomba excede sistema a Q_max. Retornando Q_max={q_max:.1f} m3/h')
-            return q_max  # Retornar máximo en m³/h
+            logger.warning(f'Solver: BOMBA EN RUNOUT. Excede curva del sistema a Q_max. Retornando Q_max={q_max:.1f} m3/h')
+            return q_max  # Retornar máximo em m³/h
 
         # Bisección para encontrar el punto de operación
         tolerance = 0.01  # m3/h

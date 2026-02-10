@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(py -m pytest:*)",
+      "Bash(pip install:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(timeout:*)",
+      "Bash(python main.py:*)"
+    ]
+  }
+}

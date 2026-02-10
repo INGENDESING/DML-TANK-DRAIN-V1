@@ -11,6 +11,11 @@ env/
 # IDEs
 .idea/
 .vscode/
+*.swp
+*.swo
 
 # Project specific
 *.log
+.DS_Store
+verify_fixes.py
+
