@@ -360,3 +360,31 @@ Contenido de la tabla:
 
 **Fin del Plan de Mejoras v3 — COMPLETADO**
 **Fecha de finalización:** 2026-02-25
+
+---
+
+# Plan de Mejora v3.1 — Mover Panel de Parámetros a la Izquierda
+
+**Fecha:** 2026-02-25
+
+## Descripción
+
+Mover el panel de "Parámetros de Entrada" del lado derecho al lado izquierdo del dashboard.
+
+## Tareas
+
+- [ ] **1** Cambiar `grid-template-columns` en `.dashboard-grid` de `1fr 380px` a `380px 1fr` (`style.css`, línea 92)
+- [ ] **2** Reordenar los `<div>` en `index.html`: mover `.input-column` antes de `.visual-column` dentro de `.dashboard-grid` (para que el orden del HTML coincida con el visual)
+- [ ] **3** Verificar que el responsive (media query `max-width: 1200px`) siga funcionando correctamente
+- [ ] **4** Commit y push
+
+## Archivos a modificar
+
+| Archivo | Cambio |
+|---|---|
+| `app/static/css/style.css` | 1 línea: swap columnas grid |
+| `app/templates/index.html` | Reordenar 2 bloques div |
+
+## Notas
+- No se necesita cambiar JavaScript
+- El `order: -1` en el media query ya pone el input arriba en móvil, seguirá funcionando igual
