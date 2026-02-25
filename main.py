@@ -115,11 +115,14 @@ def run_simulation():
         discharge_height = float(discharge_data.get('height', 10.0))
         discharge_pressure = float(discharge_data.get('pressure', 2.0))
 
-        # Accesorios
+        # Accesorios succión
         accessories = data.get('accessories', {})
-        n_elbow90 = int(accessories.get('elbow90', 2))
+        entrada_tipo = accessories.get('entrada_tipo', 'ENTRADA_BORDA_PLANA')
+        n_elbow90_rl = int(accessories.get('elbow90_rl', 2))
+        n_elbow90_rc = int(accessories.get('elbow90_rc', 0))
         n_elbow45 = int(accessories.get('elbow45', 0))
-        n_tee = int(accessories.get('tee', 0))
+        n_tee_directo = int(accessories.get('tee_directo', 0))
+        n_tee_ramal = int(accessories.get('tee_ramal', 0))
         has_filter = accessories.get('filter', True)
         has_reduction = accessories.get('reduction', True)
         has_expansion = accessories.get('expansion', False)
@@ -137,7 +140,7 @@ def run_simulation():
         from app.utils.tank import Tank
         from app.utils.fluid_props import Fluid
         from app.utils.pipes_db import get_pipe_id, PIPES_DB
-        from app.utils.valves_db import get_valve_k, VALVES_DB
+        from app.utils.valves_db import get_valve_k, get_fitting_k, VALVES_DB
         from app.utils.pumps_db import PumpCurve, PumpPoint
         from app.utils.simulation import Simulation
         from app.utils.hydraulics import g, calculate_cv, get_velocity_alarm_status
@@ -157,17 +160,20 @@ def run_simulation():
 
         pipe_roughness = PIPES_DB[pipe_std]["roughness"]
 
-        # Calcular K de accesorios
-        k_fittings = 0.5  # Entrada de tanque (borda)
-        k_fittings += n_elbow90 * 0.3  # Codos 90° radio largo
-        k_fittings += n_elbow45 * 0.2  # Codos 45°
-        k_fittings += n_tee * 1.0  # Tees flujo ramal
+        # Calcular K de accesorios succión usando Crane TP-410
+        pipe_diam_in = float(pipe_size)
+        k_fittings = get_fitting_k(entrada_tipo, pipe_diam_in)
+        k_fittings += n_elbow90_rl * get_fitting_k('CODO_90_RL', pipe_diam_in)
+        k_fittings += n_elbow90_rc * get_fitting_k('CODO_90_RC', pipe_diam_in)
+        k_fittings += n_elbow45 * get_fitting_k('CODO_45', pipe_diam_in)
+        k_fittings += n_tee_directo * get_fitting_k('TEE_DIRECTO', pipe_diam_in)
+        k_fittings += n_tee_ramal * get_fitting_k('TEE_RAMAL', pipe_diam_in)
         if has_filter:
-            k_fittings += 2.0  # Filtro Y típico
+            k_fittings += get_fitting_k('FILTRO_Y', pipe_diam_in)
         if has_reduction:
-            k_fittings += 0.5  # Reducción excéntrica
+            k_fittings += get_fitting_k('REDUCCION_EXCENTRICA', pipe_diam_in)
         if has_expansion:
-            k_fittings += 0.2  # Ampliación
+            k_fittings += get_fitting_k('AMPLIACION_GRADUAL', pipe_diam_in)
 
         pipe_specs = {
             "length": pipe_len,
@@ -183,12 +189,26 @@ def run_simulation():
             discharge_pipe_id = pipe_id  # Usar mismo diámetro si no se encuentra
             # Warning silencioso: se puede loggear pero no interrumpir la simulación
 
-        # Calcular K de accesorios de descarga
-        discharge_elbow90 = int(discharge_data.get('elbow90', 2))
-        discharge_check_valve = int(discharge_data.get('check_valve', 1))
-        k_discharge_fittings = discharge_elbow90 * 0.3  # Codos 90°
-        if discharge_check_valve:
-            k_discharge_fittings += 2.0  # Válvula check (swing)
+        # Calcular K de accesorios de descarga usando Crane TP-410
+        dis_diam_in = float(discharge_pipe_size)
+        dis_elbow90_rl = int(discharge_data.get('elbow90_rl', 2))
+        dis_elbow90_rc = int(discharge_data.get('elbow90_rc', 0))
+        dis_elbow45 = int(discharge_data.get('elbow45', 0))
+        dis_tee_directo = int(discharge_data.get('tee_directo', 0))
+        dis_tee_ramal = int(discharge_data.get('tee_ramal', 0))
+        dis_check = int(discharge_data.get('check_valve', 1))
+        dis_check_type = discharge_data.get('check_type', 'CHECK_SWING')
+        dis_salida = int(discharge_data.get('salida', 1))
+
+        k_discharge_fittings = dis_elbow90_rl * get_fitting_k('CODO_90_RL', dis_diam_in)
+        k_discharge_fittings += dis_elbow90_rc * get_fitting_k('CODO_90_RC', dis_diam_in)
+        k_discharge_fittings += dis_elbow45 * get_fitting_k('CODO_45', dis_diam_in)
+        k_discharge_fittings += dis_tee_directo * get_fitting_k('TEE_DIRECTO', dis_diam_in)
+        k_discharge_fittings += dis_tee_ramal * get_fitting_k('TEE_RAMAL', dis_diam_in)
+        if dis_check:
+            k_discharge_fittings += get_fitting_k(dis_check_type, dis_diam_in)
+        if dis_salida:
+            k_discharge_fittings += get_fitting_k('SALIDA_TUBERIA', dis_diam_in)
 
         discharge_specs = {
             "length": discharge_length,
@@ -226,10 +246,14 @@ def run_simulation():
             pump = PumpCurve(pump_flows, pump_heads, pump_npshr)
             fixed_flow = None  # No se usa en modo pressure_fixed
 
+        # Margen NPSH
+        npsh_margin = float(data.get('npsh_margin', 1.2))
+
         # === EJECUTAR SIMULACIÓN ===
         sim = Simulation(tank, pipe_specs, valve_data, pump, fluid, init_level,
                         discharge_specs=discharge_specs,
-                        calc_mode=calc_mode, fixed_flow=fixed_flow or 50.0)
+                        calc_mode=calc_mode, fixed_flow=fixed_flow or 50.0,
+                        npsh_margin=npsh_margin)
 
         # Establecer altitud para corrección de presión atmosférica
         sim.set_altitude(altitude)

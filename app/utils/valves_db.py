@@ -57,19 +57,75 @@ VALVES_DB = {
         }
     },
 
-    # Accesorios Estándar (K aproximado)
+    # Accesorios Estándar — Crane TP-410
+    # Accesorios con K fijo (no dependen de f_T)
+    "FITTINGS_FIXED": {
+        "ENTRADA_BORDA_ENTRANTE": 0.78,   # Crane TP-410
+        "ENTRADA_BORDA_PLANA": 0.50,      # Crane TP-410
+        "ENTRADA_REDONDEADA": 0.04,       # Crane TP-410
+        "REDUCCION_CONCENTRICA": 0.5,     # Estimado conservador
+        "REDUCCION_EXCENTRICA": 0.5,      # Estimado conservador
+        "AMPLIACION_GRADUAL": 0.2,        # Crane TP-410
+        "FILTRO_Y": 2.0,                  # Práctica industrial
+        "SALIDA_TUBERIA": 1.0,            # Crane TP-410
+    },
+
+    # Accesorios con K = n × f_T (dependen del diámetro via factor de fricción turbulento)
+    "FITTINGS_FT": {
+        "CODO_90_RL": 20,       # K = 20 × f_T — Codo 90° radio largo (soldado)
+        "CODO_90_RC": 30,       # K = 30 × f_T — Codo 90° radio estándar (roscado)
+        "CODO_45": 16,          # K = 16 × f_T — Codo 45° estándar
+        "TEE_DIRECTO": 20,      # K = 20 × f_T — Tee paso directo
+        "TEE_RAMAL": 60,        # K = 60 × f_T — Tee paso ramal
+        "CHECK_SWING": 100,     # K = 100 × f_T — Válvula check (swing)
+        "CHECK_LIFT": 600,      # K = 600 × f_T — Válvula check (lift)
+    },
+
+    # Factor de fricción turbulento f_T por diámetro nominal (pulgadas) — Crane TP-410
+    "FT_BY_DIAMETER": {
+        "1": 0.023, "1.5": 0.021, "2": 0.019, "3": 0.018,
+        "4": 0.017, "6": 0.015, "8": 0.014, "10": 0.013, "12": 0.012,
+    },
+
+    # Compatibilidad: diccionario plano con valores por defecto (f_T para 4")
     "FITTINGS": {
-        "CODO_90_RL": 0.3,  # Radio Largo
-        "CODO_90_RC": 0.75, # Radio Corto
-        "CODO_45": 0.2,
-        "TEE_FLUJO_DIRECTO": 0.2,
-        "TEE_FLUJO_RAMAL": 1.0,
-        "REDUCCION": 0.1,   # Depende de la relación de áreas (se calculará en lógica)
-        "AMPLIACION": 0.2,  # Depende de la relación de áreas
-        "ENTRADA_TANQUE": 0.5, # Borda
+        "CODO_90_RL": 0.34,     # 20 × 0.017
+        "CODO_90_RC": 0.51,     # 30 × 0.017
+        "CODO_45": 0.27,        # 16 × 0.017
+        "TEE_FLUJO_DIRECTO": 0.34,  # 20 × 0.017
+        "TEE_FLUJO_RAMAL": 1.02,    # 60 × 0.017
+        "REDUCCION": 0.5,
+        "AMPLIACION": 0.2,
+        "ENTRADA_TANQUE": 0.5,
         "SALIDA_TANQUE": 1.0,
+        "FILTRO_Y": 2.0,
+        "CHECK_SWING": 1.7,     # 100 × 0.017
+        "CHECK_LIFT": 10.2,     # 600 × 0.017
     }
 }
+
+
+def get_ft(pipe_diameter_inches):
+    """Retorna f_T (factor de fricción turbulento) para un diámetro nominal dado.
+    Fuente: Crane TP-410, Tabla A-26."""
+    size_key = str(pipe_diameter_inches).rstrip('0').rstrip('.')
+    return VALVES_DB["FT_BY_DIAMETER"].get(size_key, 0.017)  # Default 4"
+
+
+def get_fitting_k(fitting_type, pipe_diameter_inches=4):
+    """Calcula el K de un accesorio usando Crane TP-410.
+    Para accesorios f_T-dependientes: K = n × f_T(diámetro).
+    Para accesorios fijos: K = valor constante."""
+    # Primero buscar en fijos
+    if fitting_type in VALVES_DB["FITTINGS_FIXED"]:
+        return VALVES_DB["FITTINGS_FIXED"][fitting_type]
+    # Luego en f_T-dependientes
+    if fitting_type in VALVES_DB["FITTINGS_FT"]:
+        n = VALVES_DB["FITTINGS_FT"][fitting_type]
+        ft = get_ft(pipe_diameter_inches)
+        return n * ft
+    # Fallback al diccionario plano
+    return VALVES_DB["FITTINGS"].get(fitting_type, 0.5)
 
 def get_valve_k(valve_type, percent_open=100):
     """

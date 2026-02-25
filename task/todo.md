@@ -29,7 +29,7 @@
 
 **Líneas afectadas:** ~10 líneas nuevas dentro de `system_head()` (líneas 239-260)
 
-- [ ] **1.1** Agregar pérdidas de descarga dentro de `system_head()` en `_solve_flow()`
+- [x] **1.1** Agregar pérdidas de descarga dentro de `system_head()` en `_solve_flow()`
 
 ---
 
@@ -46,7 +46,7 @@
 
 **Líneas afectadas:** 1 línea modificada (línea 232)
 
-- [ ] **1.2** Extender `q_max` a `flow_points[-1] * 1.5` en `_solve_flow()`
+- [x] **1.2** Extender `q_max` a `flow_points[-1] * 1.5` en `_solve_flow()`
 
 ---
 
@@ -63,7 +63,7 @@
 
 **Líneas afectadas:** ~8 líneas nuevas en `index.html`
 
-- [ ] **2.1** Agregar selector `npsh_margin` en HTML
+- [x] **2.1** Agregar selector `npsh_margin` en HTML
 
 ### Tarea 2.2 — Enviar `npsh_margin` al backend
 
@@ -73,7 +73,7 @@
 
 **Líneas afectadas:** 1 línea nueva en el payload
 
-- [ ] **2.2** Enviar `npsh_margin` en el payload de simulación
+- [x] **2.2** Enviar `npsh_margin` en el payload de simulación
 
 ### Tarea 2.3 — Usar `npsh_margin` en `simulation.py`
 
@@ -89,7 +89,7 @@
 
 **Líneas afectadas:** ~5 líneas entre ambos archivos
 
-- [ ] **2.3** Usar `npsh_margin` dinámico en backend (simulation.py + main.py)
+- [x] **2.3** Usar `npsh_margin` dinámico en backend (simulation.py + main.py)
 
 ---
 
@@ -120,7 +120,7 @@ Nuevos accesorios:
 
 **Líneas afectadas:** ~40 líneas reemplazadas/nuevas en `valves_db.py`
 
-- [ ] **2.4** Ampliar catálogo FITTINGS en `valves_db.py` con Crane TP-410
+- [x] **2.4** Ampliar catálogo FITTINGS en `valves_db.py` con Crane TP-410
 
 ### Tarea 2.5 — Accesorios seleccionables en HTML (succión y descarga)
 
@@ -132,7 +132,7 @@ Nuevos accesorios:
 
 **Líneas afectadas:** ~40 líneas modificadas en sección succión, ~30 líneas nuevas en sección descarga
 
-- [ ] **2.5** Actualizar selectores de accesorios en HTML (succión + descarga)
+- [x] **2.5** Actualizar selectores de accesorios en HTML (succión + descarga)
 
 ### Tarea 2.6 — Conectar nuevos accesorios al cálculo de K en `main.py`
 
@@ -142,7 +142,7 @@ Nuevos accesorios:
 
 **Líneas afectadas:** ~20 líneas modificadas
 
-- [ ] **2.6** Actualizar cálculo de K en `main.py` usando nuevo catálogo
+- [x] **2.6** Actualizar cálculo de K en `main.py` usando nuevo catálogo
 
 ---
 
@@ -161,7 +161,7 @@ Nuevos accesorios:
 
 **Líneas afectadas:** ~8 líneas dispersas en `main.js`
 
-- [ ] **3.1** Convertir todas las salidas de tiempo a minutos
+- [x] **3.1** Convertir todas las salidas de tiempo a minutos
 
 ### Tarea 3.2 — Convertir presiones de bar a mca (Mejora 3)
 
@@ -179,7 +179,7 @@ Puntos de conversión:
 
 **Líneas afectadas:** ~15 líneas dispersas en `main.js`
 
-- [ ] **3.2** Convertir todas las presiones de bar a mca
+- [x] **3.2** Convertir todas las presiones de bar a mca
 
 ### Tarea 3.3 — Centrar diagrama GA1 en el canvas (Mejora 6)
 
@@ -198,7 +198,7 @@ El cambio es mínimo: solo se modifica la asignación de `tankX` y se agrega 2-3
 
 **Líneas afectadas:** ~5 líneas modificadas/nuevas (líneas 1133-1148)
 
-- [ ] **3.3** Calcular offset horizontal y centrar el diagrama GA1
+- [x] **3.3** Calcular offset horizontal y centrar el diagrama GA1
 
 ### Tarea 3.4 — Etiqueta dinámica de tipo de bomba en GA1 (Mejora 7)
 
@@ -216,7 +216,7 @@ ctx.fillText(pumpLabel, panelX + Math.floor(10 * scale), panelY + Math.floor(18 
 
 **Líneas afectadas:** 1 línea reemplazada por ~4 líneas (línea 1898)
 
-- [ ] **3.4** Hacer dinámica la etiqueta de tipo de bomba en `drawPumpISO()`
+- [x] **3.4** Hacer dinámica la etiqueta de tipo de bomba en `drawPumpISO()`
 
 ---
 
@@ -230,7 +230,7 @@ ctx.fillText(pumpLabel, panelX + Math.floor(10 * scale), panelY + Math.floor(18 
 
 **Líneas afectadas:** ~30 líneas nuevas en `exportToPDF()`
 
-- [ ] **4.1** Gráfica Volumen vs Tiempo en PDF
+- [x] **4.1** Gráfica Volumen vs Tiempo en PDF
 
 ### Tarea 4.2 — Sección de balance hidráulico detallado en PDF (Mejora 5)
 
@@ -258,7 +258,7 @@ Contenido de la tabla:
 
 **Líneas afectadas:** ~50 líneas nuevas en `exportToPDF()`
 
-- [ ] **4.2** Tabla de balance hidráulico detallado en PDF
+- [x] **4.2** Tabla de balance hidráulico detallado en PDF
 
 ---
 
@@ -291,3 +291,72 @@ Contenido de la tabla:
 - El catálogo Crane TP-410 usa `K = n × f_T` donde `f_T` depende del diámetro. Esto requiere conocer el diámetro nominal en pulgadas, que ya está disponible en el request como `pipe_size`.
 - El centrado del GA1 solo requiere un offset horizontal. No se modifica la lógica de posicionamiento relativo entre componentes.
 - La etiqueta de bomba lee directamente del DOM (`#pump_type`), no requiere cambios en el backend.
+
+---
+
+## Revisión — Resumen de Cambios Realizados
+
+**14 tareas completadas. 41 tests pasaron exitosamente.**
+
+### Fase 1: Corrección del Solver
+
+#### 1.1 — Pérdidas de descarga en `_solve_flow()`
+- `simulation.py`: Dentro de `system_head()`, se agregó cálculo completo de pérdidas de descarga (velocidad, Reynolds, fricción, accesorios). Ahora `H_sistema(Q) = H_estática + Σh_f_succión(Q) + Σh_f_descarga(Q)`.
+
+#### 1.2 — Rango extendido del solver
+- `simulation.py`: `q_max = flow_points[-1] * 1.5` permite encontrar la intersección real bomba-sistema cuando la bomba excede la curva del sistema.
+
+### Fase 2: Parámetros de Simulación
+
+#### 2.1–2.3 — Margen NPSH configurable
+- `index.html`: Selector `<select id="npsh_margin">` con 3 opciones (1.1, 1.15, 1.2)
+- `main.js`: Lee y envía `npsh_margin` en el payload
+- `simulation.py`: Constructor acepta `npsh_margin`, usa `self.npsh_margin * npsh_r` en alarma
+- `main.py`: Lee `npsh_margin` del request y lo pasa al constructor
+
+#### 2.4 — Catálogo Crane TP-410
+- `valves_db.py`: Tres diccionarios: `FITTINGS_FIXED` (K constantes), `FITTINGS_FT` (K = n × f_T), `FT_BY_DIAMETER` (f_T por diámetro nominal). Funciones `get_ft()` y `get_fitting_k()`.
+
+#### 2.5–2.6 — Accesorios seleccionables
+- `index.html`: Succión con selector de tipo de entrada (borda entrante/plana/redondeada), codos 90° RL y RC separados, tee directo y ramal separados. Descarga con los mismos tipos, selector check swing/lift, salida de tubería.
+- `main.js`: Payload lee todos los nuevos accesorios con checkboxes + cantidades
+- `main.py`: Usa `get_fitting_k()` con diámetro de tubería para calcular K preciso según Crane TP-410
+
+### Fase 3: Presentación Visual
+
+#### 3.1 — Tiempo en minutos
+- `main.js` + `index.html`: 10 puntos de cambio (CSV header, CSV data, tabla HTML header, tabla HTML data, gráfica eje X label, gráfica labels, info panel, animación, GA1 tag TI-001, resumen PDF)
+
+#### 3.2 — Presiones en mca
+- `main.js` + `index.html`: Factor `× 10.1972` aplicado en: tabla resultados (ΔP suc, ΔP valv, P suc, ΔP desc, ΔP total), GA1 panels (V-001 ΔP, P-001 P suc, FI-001 P desc), CSV export, tabla válvula, formatPressureDiff
+
+#### 3.3 — Centrado GA1
+- `main.js`: Se calcula `totalSystemWidth` (medio tanque + pipe run + gap + tag zone), luego `offsetX = (W - totalSystemWidth) / 2`. `tankX = offsetX` y `tagZoneX = offsetX + totalSystemWidth - tagZoneW`.
+
+#### 3.4 — Etiqueta dinámica bomba
+- `main.js` (drawPumpISO): Lee `#pump_type` del DOM. Muestra "P-001 - Bomba Centrífuga" o "P-001 - Bomba Desplaz. Positivo" según selección.
+
+### Fase 4: Reporte PDF
+
+#### 4.1 — Gráfica Volumen vs Tiempo
+- `main.js` (exportToPDF): Nueva página con gráfica dibujada en canvas off-screen (800×400px). Ejes con labels, ticks, grid. Curva azul de volumen. Se inserta como imagen PNG en el PDF.
+
+#### 4.2 — Balance hidráulico detallado
+- `main.js` (exportToPDF): Tabla con 14 filas comparando punto inicial vs punto final: nivel, caudal, velocidad, h_f succión, h_k succión, h válvula, P succión, TDH, ΔP descarga, potencia, NPSHa, NPSHr, margen, diagnóstico.
+
+### Archivos Modificados
+1. `app/utils/simulation.py` — Bug fix solver + parámetro npsh_margin
+2. `app/utils/valves_db.py` — Catálogo Crane TP-410 ampliado
+3. `main.py` — Nuevo catálogo K + npsh_margin
+4. `app/templates/index.html` — Selectores NPSH, accesorios, unidades
+5. `app/static/js/main.js` — Payload, unidades, centrado GA1, etiqueta bomba, PDF
+
+### Resultado de Tests
+```
+41 passed in 0.41s
+```
+
+---
+
+**Fin del Plan de Mejoras v3 — COMPLETADO**
+**Fecha de finalización:** 2026-02-25

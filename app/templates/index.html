@@ -57,7 +57,7 @@
                             </div>
                             <div style="flex: 1;">
                                 <small style="color: #9ca3af;">Tiempo de Vaciado</small>
-                                <div style="color: #00ff88; font-size: 16px;"><span id="info-time">--</span> s</div>
+                                <div style="color: #00ff88; font-size: 16px;"><span id="info-time">--</span> min</div>
                             </div>
                             <div style="flex: 1;">
                                 <small style="color: #9ca3af;">Estado Final</small>
@@ -101,7 +101,7 @@
                                 <thead>
                                     <tr>
                                         <th>Cv</th>
-                                        <th>ΔP (bar)</th>
+                                        <th>ΔP (mca)</th>
                                         <th>Q (m³/h)</th>
                                         <th>Condición</th>
                                     </tr>
@@ -124,22 +124,22 @@
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>t (s)</th>
+                                        <th>t (min)</th>
                                         <th>Nivel (m)</th>
                                         <th>Vol (m³)</th>
                                         <th>Q (m³/h)</th>
                                         <th>v (m/s)</th>
                                         <th>Re</th>
                                         <th>Régimen</th>
-                                        <th>ΔP suc (bar)</th>
-                                        <th>ΔP valv (bar)</th>
-                                        <th>P suc (bar)</th>
+                                        <th>ΔP suc (mca)</th>
+                                        <th>ΔP valv (mca)</th>
+                                        <th>P suc (mca)</th>
                                         <th>NPSHa</th>
                                         <th>NPSHr</th>
-                                        <th>ΔP desc (bar)</th>
+                                        <th>ΔP desc (mca)</th>
                                         <th>TDH (m)</th>
                                         <th>Pot (kW)</th>
-                                        <th>ΔP (bar)</th>
+                                        <th>ΔP (mca)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="results-body">
@@ -322,34 +322,45 @@
                                             value="2.0" required>
                                     </div>
                                 </div>
-                                <!-- Accesorios -->
-                                <label class="section-subtitle">Accesorios:</label>
+                                <!-- Accesorios Succión -->
+                                <label class="section-subtitle">Accesorios Succión:</label>
+                                <div class="form-group">
+                                    <label for="suc_entrada_tipo">Tipo de Entrada al Tanque</label>
+                                    <select name="suc_entrada_tipo" id="suc_entrada_tipo">
+                                        <option value="ENTRADA_BORDA_PLANA" selected>Borda plana (K=0.50)</option>
+                                        <option value="ENTRADA_BORDA_ENTRANTE">Borda entrante (K=0.78)</option>
+                                        <option value="ENTRADA_REDONDEADA">Redondeada (K=0.04)</option>
+                                    </select>
+                                </div>
                                 <div class="accessories-grid">
                                     <label class="checkbox-label">
-                                        <input type="checkbox" name="acc_elbow90" checked> Codo 90° (<span
-                                            id="qty_elbow90">2</span>)
-                                        <input type="number" class="qty-input" id="input_elbow90" value="2" min="0"
-                                            max="10">
+                                        <input type="checkbox" name="acc_elbow90_rl" checked> Codo 90° RL (<span id="qty_elbow90">2</span>)
+                                        <input type="number" class="qty-input" id="input_elbow90" value="2" min="0" max="10">
                                     </label>
                                     <label class="checkbox-label">
-                                        <input type="checkbox" name="acc_elbow45"> Codo 45° (<span
-                                            id="qty_elbow45">0</span>)
-                                        <input type="number" class="qty-input" id="input_elbow45" value="0" min="0"
-                                            max="10">
+                                        <input type="checkbox" name="acc_elbow90_rc"> Codo 90° RC (<span id="qty_elbow90_rc">0</span>)
+                                        <input type="number" class="qty-input" id="input_elbow90_rc" value="0" min="0" max="10">
                                     </label>
                                     <label class="checkbox-label">
-                                        <input type="checkbox" name="acc_tee"> Tee (<span id="qty_tee">0</span>)
-                                        <input type="number" class="qty-input" id="input_tee" value="0" min="0"
-                                            max="10">
+                                        <input type="checkbox" name="acc_elbow45"> Codo 45° (<span id="qty_elbow45">0</span>)
+                                        <input type="number" class="qty-input" id="input_elbow45" value="0" min="0" max="10">
                                     </label>
                                     <label class="checkbox-label">
-                                        <input type="checkbox" name="acc_filter" checked> Filtro
+                                        <input type="checkbox" name="acc_tee_directo"> Tee Directo (<span id="qty_tee_directo">0</span>)
+                                        <input type="number" class="qty-input" id="input_tee_directo" value="0" min="0" max="10">
                                     </label>
                                     <label class="checkbox-label">
-                                        <input type="checkbox" name="acc_reduction" checked> Reducción Exc.
+                                        <input type="checkbox" name="acc_tee_ramal"> Tee Ramal (<span id="qty_tee_ramal">0</span>)
+                                        <input type="number" class="qty-input" id="input_tee_ramal" value="0" min="0" max="10">
                                     </label>
                                     <label class="checkbox-label">
-                                        <input type="checkbox" name="acc_expansion"> Ampliación
+                                        <input type="checkbox" name="acc_filter" checked> Filtro Y (K=2.0)
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="acc_reduction" checked> Reducción Exc. (K=0.5)
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="acc_expansion"> Ampliación (K=0.2)
                                     </label>
                                 </div>
                             </div>
@@ -385,6 +396,15 @@
                                     <select name="pump_type" id="pump_type">
                                         <option value="centrifuga">Centrífuga</option>
                                         <option value="desplazamiento">Desplazamiento Positivo</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="npsh_margin">Margen de Seguridad NPSH</label>
+                                    <select name="npsh_margin" id="npsh_margin">
+                                        <option value="1.1">NPSHa ≥ 1.1 × NPSHr (mínimo)</option>
+                                        <option value="1.15">NPSHa ≥ 1.15 × NPSHr (moderado)</option>
+                                        <option value="1.2" selected>NPSHa ≥ 1.2 × NPSHr (API 610)</option>
                                     </select>
                                 </div>
 
@@ -468,18 +488,37 @@
                                 </div>
                                 <!-- Accesorios de descarga -->
                                 <label class="section-subtitle">Accesorios Descarga:</label>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="discharge_elbow90">Codos 90°</label>
-                                        <input type="number" id="discharge_elbow90" name="discharge_elbow90" value="2" min="0" max="10">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="discharge_check_valve">Válvula Check</label>
-                                        <select id="discharge_check_valve" name="discharge_check_valve">
-                                            <option value="1" selected>Sí (K=2.0)</option>
-                                            <option value="0">No</option>
+                                <div class="accessories-grid">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="dis_elbow90_rl" checked> Codo 90° RL (<span id="qty_dis_elbow90">2</span>)
+                                        <input type="number" class="qty-input" id="input_dis_elbow90" value="2" min="0" max="10">
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="dis_elbow90_rc"> Codo 90° RC (<span id="qty_dis_elbow90_rc">0</span>)
+                                        <input type="number" class="qty-input" id="input_dis_elbow90_rc" value="0" min="0" max="10">
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="dis_elbow45"> Codo 45° (<span id="qty_dis_elbow45">0</span>)
+                                        <input type="number" class="qty-input" id="input_dis_elbow45" value="0" min="0" max="10">
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="dis_tee_directo"> Tee Directo (<span id="qty_dis_tee_directo">0</span>)
+                                        <input type="number" class="qty-input" id="input_dis_tee_directo" value="0" min="0" max="10">
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="dis_tee_ramal"> Tee Ramal (<span id="qty_dis_tee_ramal">0</span>)
+                                        <input type="number" class="qty-input" id="input_dis_tee_ramal" value="0" min="0" max="10">
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="dis_check_valve" checked> Check Swing
+                                        <select class="qty-input" id="input_dis_check_type" style="width:auto">
+                                            <option value="CHECK_SWING" selected>Swing</option>
+                                            <option value="CHECK_LIFT">Lift</option>
                                         </select>
-                                    </div>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="dis_salida" checked> Salida Tubería (K=1.0)
+                                    </label>
                                 </div>
                                 <div class="form-row">
                                     <div class="form-group">
