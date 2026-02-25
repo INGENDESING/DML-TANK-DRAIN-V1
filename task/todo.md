@@ -373,10 +373,10 @@ Mover el panel de "Parámetros de Entrada" del lado derecho al lado izquierdo de
 
 ## Tareas
 
-- [ ] **1** Cambiar `grid-template-columns` en `.dashboard-grid` de `1fr 380px` a `380px 1fr` (`style.css`, línea 92)
-- [ ] **2** Reordenar los `<div>` en `index.html`: mover `.input-column` antes de `.visual-column` dentro de `.dashboard-grid` (para que el orden del HTML coincida con el visual)
-- [ ] **3** Verificar que el responsive (media query `max-width: 1200px`) siga funcionando correctamente
-- [ ] **4** Commit y push
+- [x] **1** Cambiar `grid-template-columns` en `.dashboard-grid` de `1fr 380px` a `380px 1fr` (`style.css`, línea 92)
+- [x] **2** Reordenar los `<div>` en `index.html`: mover `.input-column` antes de `.visual-column` dentro de `.dashboard-grid` (para que el orden del HTML coincida con el visual)
+- [x] **3** Verificar que el responsive (media query `max-width: 1200px`) siga funcionando correctamente — 41 tests pasaron
+- [x] **4** Commit y push
 
 ## Archivos a modificar
 
@@ -388,3 +388,10 @@ Mover el panel de "Parámetros de Entrada" del lado derecho al lado izquierdo de
 ## Notas
 - No se necesita cambiar JavaScript
 - El `order: -1` en el media query ya pone el input arriba en móvil, seguirá funcionando igual
+
+## Revisión — Resumen de Cambios
+
+- **`app/static/css/style.css`**: Cambiada 1 línea — `grid-template-columns: 1fr 380px` → `380px 1fr`
+- **`app/templates/index.html`**: Reordenados los 2 bloques div hijos de `.dashboard-grid` — `.input-column` ahora va primero (izquierda), `.visual-column` va segundo (derecha)
+- **Tests**: 41 passed
+- **JavaScript**: Sin cambios necesarios
