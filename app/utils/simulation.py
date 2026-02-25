@@ -10,8 +10,9 @@ from app.utils.hydraulics import (calculate_velocity, calculate_reynolds,
 logger = logging.getLogger(__name__)
 
 class Simulation:
-    def __init__(self, tank, pipe_specs, valve_data, pump_curve, fluid, initial_level_h, 
-                 min_level_h=0.1, discharge_specs=None, calc_mode='pressure_fixed', fixed_flow=50.0):
+    def __init__(self, tank, pipe_specs, valve_data, pump_curve, fluid, initial_level_h,
+                 min_level_h=0.1, discharge_specs=None, calc_mode='pressure_fixed', fixed_flow=50.0,
+                 npsh_margin=1.2):
         """
         :param tank: Objeto Tank
         :param pipe_specs: Dict succión
@@ -30,6 +31,7 @@ class Simulation:
         self.discharge = discharge_specs
         self.calc_mode = calc_mode
         self.fixed_flow = fixed_flow
+        self.npsh_margin = npsh_margin
 
         # Presión atmosférica corregida por altitud (se recibe en inicialización)
         self.patm_pa = 101325  # Default, se actualiza con set_altitude si se proporciona
@@ -167,7 +169,7 @@ class Simulation:
         # Detector de alarma - API 610: NPSHa >= max(1.3×NPSHr, NPSHr + 0.6m)
         # Usamos factor 1.2 para sincronizar con frontend
         alarm = False
-        npsh_required = max(1.2 * npsh_r, npsh_r + 0.6)
+        npsh_required = max(self.npsh_margin * npsh_r, npsh_r + 0.6)
         if npsh_a < npsh_required:
             alarm = True
             
@@ -229,7 +231,7 @@ class Simulation:
         q_min = 0.1  # Caudal mínimo para evitar división por cero
         # Obtener q_max según el tipo de bomba
         if hasattr(pump, 'flow_points'):
-            q_max = float(pump.flow_points[-1])  # PumpCurve
+            q_max = float(pump.flow_points[-1]) * 1.5  # PumpCurve: extender 50% para encontrar intersección real
         else:
             q_max = pump.flow * 2.0  # PumpPoint: usar el flujo nominal como referencia
 
@@ -241,23 +243,34 @@ class Simulation:
             if q_m3h <= 0:
                 return head_required_system  # Retornar cabeza estática mínima
 
-            # Calcular velocidad
+            # Calcular velocidad succión
             area = math.pi * (self.pipe['id'] / 2) ** 2
             vel = calculate_velocity(q_m3h, area)
 
-            # Reynolds y factor de fricción
+            # Reynolds y factor de fricción succión
             re = calculate_reynolds(self.fluid.rho, vel, self.pipe['id'], self.fluid.mu)
             f = calculate_friction_factor(re, self.pipe['roughness'], self.pipe['id'])
 
-            # Pérdidas en tubería
+            # Pérdidas en tubería succión
             h_pipe = calculate_head_loss_pipe(f, self.pipe['length'], self.pipe['id'], vel)
 
-            # Pérdidas en accesorios + válvula
+            # Pérdidas en accesorios + válvula succión
             k_total = self.pipe['k_fittings'] + self.valve['k']
             h_fittings = calculate_head_loss_fittings(k_total, vel)
 
-            # Cabeza total del sistema = estática + pérdidas + destino requerido
-            return h_pipe + h_fittings + head_required_system
+            # Pérdidas en descarga
+            h_discharge = 0
+            if self.discharge:
+                area_dis = math.pi * (self.discharge['id'] / 2) ** 2
+                vel_dis = calculate_velocity(q_m3h, area_dis)
+                re_dis = calculate_reynolds(self.fluid.rho, vel_dis, self.discharge['id'], self.fluid.mu)
+                f_dis = calculate_friction_factor(re_dis, self.discharge['roughness'], self.discharge['id'])
+                h_discharge = calculate_head_loss_pipe(f_dis, self.discharge['length'], self.discharge['id'], vel_dis)
+                k_dis = self.discharge.get('k_fittings', 2.6)
+                h_discharge += calculate_head_loss_fittings(k_dis, vel_dis)
+
+            # Cabeza total del sistema = estática + pérdidas succión + pérdidas descarga
+            return h_pipe + h_fittings + h_discharge + head_required_system
 
         def residual(q_m3h):
             """Diferencia entre cabeza de bomba y cabeza del sistema"""

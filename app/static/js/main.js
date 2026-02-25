@@ -122,15 +122,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Cabeceras CSV
         const headers = [
-            't (s)', 'Nivel (m)', 'Volumen (m³)', 'Q (m³/h)', 'v (m/s)',
+            't (min)', 'Nivel (m)', 'Volumen (m³)', 'Q (m³/h)', 'v (m/s)',
             'Re', 'Régimen', 'f (Darcy)',
-            'ΔP suc (bar)', 'ΔP valv (bar)', 'P suc (bar)', 'NPSHa (m)', 'NPSHr (m)',
-            'ΔP desc (bar)', 'TDH (m)', 'Potencia (kW)', 'ΔP total (bar)', 'Cv', 'Alarma'
+            'ΔP suc (mca)', 'ΔP valv (mca)', 'P suc (mca)', 'NPSHa (m)', 'NPSHr (m)',
+            'ΔP desc (mca)', 'TDH (m)', 'Potencia (kW)', 'ΔP total (mca)', 'Cv', 'Alarma'
         ];
 
         // Convertir datos a filas CSV
         const rows = simulationData.map(p => [
-            p.time.toFixed(1),
+            (p.time / 60).toFixed(2),
             p.level.toFixed(4),
             p.volume.toFixed(3),
             p.flow_m3h.toFixed(3),
@@ -138,15 +138,15 @@ document.addEventListener('DOMContentLoaded', () => {
             (p.reynolds || 0).toFixed(0),
             p.flow_regime || '--',
             (p.friction_factor || 0).toFixed(6),
-            (p.dp_pipe || 0).toFixed(5),
-            (p.dp_valve || 0).toFixed(5),
-            p.pressure_suction_bar.toFixed(4),
+            ((p.dp_pipe || 0) * 10.1972).toFixed(4),
+            ((p.dp_valve || 0) * 10.1972).toFixed(4),
+            (p.pressure_suction_bar * 10.1972).toFixed(3),
             p.npsh_a.toFixed(3),
             p.npsh_r.toFixed(3),
-            (p.dp_discharge || 0).toFixed(5),
+            ((p.dp_discharge || 0) * 10.1972).toFixed(4),
             (p.pump_head_m || 0).toFixed(3),
             (p.pump_power_kw || 0).toFixed(3),
-            (p.pressure_diff_bar || 0).toFixed(4),
+            ((p.pressure_diff_bar || 0) * 10.1972).toFixed(3),
             (p.cv || 0).toFixed(2),
             p.alarm ? 'SI' : 'NO'
         ]);
@@ -334,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const hasAlarm = simulationData.some(p => p.alarm);
 
         const summaryData = [
-            ['Tiempo de Vaciado', `${lastPoint.time.toFixed(0)} s (${(lastPoint.time / 60).toFixed(1)} min)`],
+            ['Tiempo de Vaciado', `${(lastPoint.time / 60).toFixed(2)} min`],
             ['Caudal Inicial', `${firstPoint.flow_m3h.toFixed(2)} m³/h`],
             ['Caudal Final', `${lastPoint.flow_m3h.toFixed(2)} m³/h`],
             ['Volumen Final', `${lastPoint.volume.toFixed(3)} m³`],
@@ -366,7 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedPoints = simulationData.filter((_, i) => i % step === 0 || i === simulationData.length - 1);
 
         const tableData = selectedPoints.map(p => [
-            p.time.toFixed(0),
+            (p.time / 60).toFixed(2),
             p.level.toFixed(3),
             p.volume.toFixed(2),
             p.flow_m3h.toFixed(2),
@@ -378,13 +378,154 @@ document.addEventListener('DOMContentLoaded', () => {
 
         doc.autoTable({
             startY: yPos,
-            head: [['t (s)', 'Nivel (m)', 'Vol (m³)', 'Q (m³/h)', 'v (m/s)', 'NPSHa', 'NPSHr', 'TDH (m)']],
+            head: [['t (min)', 'Nivel (m)', 'Vol (m³)', 'Q (m³/h)', 'v (m/s)', 'NPSHa', 'NPSHr', 'TDH (m)']],
             body: tableData,
             theme: 'grid',
             headStyles: { fillColor: [45, 45, 60], fontSize: 7, halign: 'center' },
             bodyStyles: { fontSize: 6, halign: 'center' },
             margin: { left: 10, right: 10 },
             tableWidth: 'auto'
+        });
+
+        // === 4. GRÁFICA VOLUMEN VS TIEMPO ===
+        doc.addPage();
+        yPos = 15;
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text('4. Volumen del Tanque vs. Tiempo', 15, yPos);
+        yPos += 8;
+
+        // Generar gráfica off-screen
+        try {
+            const offCanvas = document.createElement('canvas');
+            offCanvas.width = 800;
+            offCanvas.height = 400;
+            const offCtx = offCanvas.getContext('2d');
+
+            // Fondo blanco
+            offCtx.fillStyle = '#ffffff';
+            offCtx.fillRect(0, 0, 800, 400);
+
+            // Márgenes del gráfico
+            const mLeft = 70, mRight = 30, mTop = 30, mBottom = 50;
+            const gW = 800 - mLeft - mRight;
+            const gH = 400 - mTop - mBottom;
+
+            // Datos
+            const volData = simulationData.map(p => ({ t: p.time / 60, v: p.volume }));
+            const maxT = Math.max(...volData.map(d => d.t));
+            const maxV = Math.max(...volData.map(d => d.v));
+
+            // Ejes
+            offCtx.strokeStyle = '#333';
+            offCtx.lineWidth = 1;
+            offCtx.beginPath();
+            offCtx.moveTo(mLeft, mTop);
+            offCtx.lineTo(mLeft, mTop + gH);
+            offCtx.lineTo(mLeft + gW, mTop + gH);
+            offCtx.stroke();
+
+            // Labels ejes
+            offCtx.fillStyle = '#333';
+            offCtx.font = '14px Arial';
+            offCtx.textAlign = 'center';
+            offCtx.fillText('Tiempo (min)', mLeft + gW / 2, 400 - 10);
+            offCtx.save();
+            offCtx.translate(15, mTop + gH / 2);
+            offCtx.rotate(-Math.PI / 2);
+            offCtx.fillText('Volumen (m³)', 0, 0);
+            offCtx.restore();
+
+            // Ticks eje X (5 marcas)
+            offCtx.font = '11px Arial';
+            offCtx.textAlign = 'center';
+            for (let i = 0; i <= 5; i++) {
+                const tVal = (maxT * i / 5);
+                const xPos = mLeft + (tVal / maxT) * gW;
+                offCtx.fillText(tVal.toFixed(1), xPos, mTop + gH + 18);
+                offCtx.strokeStyle = '#ddd';
+                offCtx.beginPath();
+                offCtx.moveTo(xPos, mTop);
+                offCtx.lineTo(xPos, mTop + gH);
+                offCtx.stroke();
+            }
+
+            // Ticks eje Y (5 marcas)
+            offCtx.textAlign = 'right';
+            for (let i = 0; i <= 5; i++) {
+                const vVal = (maxV * i / 5);
+                const yP = mTop + gH - (vVal / maxV) * gH;
+                offCtx.fillStyle = '#333';
+                offCtx.fillText(vVal.toFixed(1), mLeft - 8, yP + 4);
+                offCtx.strokeStyle = '#ddd';
+                offCtx.beginPath();
+                offCtx.moveTo(mLeft, yP);
+                offCtx.lineTo(mLeft + gW, yP);
+                offCtx.stroke();
+            }
+
+            // Curva de volumen
+            offCtx.strokeStyle = '#0078d4';
+            offCtx.lineWidth = 2;
+            offCtx.beginPath();
+            volData.forEach((d, i) => {
+                const x = mLeft + (d.t / maxT) * gW;
+                const y = mTop + gH - (d.v / maxV) * gH;
+                if (i === 0) offCtx.moveTo(x, y);
+                else offCtx.lineTo(x, y);
+            });
+            offCtx.stroke();
+
+            // Insertar en PDF
+            const imgData = offCanvas.toDataURL('image/png');
+            doc.addImage(imgData, 'PNG', 10, yPos, pageWidth - 20, (pageWidth - 20) * 0.5);
+            yPos += (pageWidth - 20) * 0.5 + 10;
+        } catch (e) {
+            console.warn('Error generando gráfica Volumen vs Tiempo:', e);
+            doc.setFontSize(9);
+            doc.text('Error generando gráfica.', 15, yPos);
+            yPos += 10;
+        }
+
+        // === 5. BALANCE HIDRÁULICO DETALLADO ===
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text('5. Balance Hidráulico Detallado', 15, yPos);
+        yPos += 8;
+
+        const fp = simulationData[0]; // Punto inicial
+        const lp = simulationData[simulationData.length - 1]; // Punto final
+
+        const barToMca = 10.1972;
+        const balanceData = [
+            ['Nivel del tanque [m]', fp.level.toFixed(3), lp.level.toFixed(3)],
+            ['Caudal [m³/h]', fp.flow_m3h.toFixed(2), lp.flow_m3h.toFixed(2)],
+            ['Velocidad succión [m/s]', fp.velocity_ms.toFixed(3), lp.velocity_ms.toFixed(3)],
+            ['h_f succión (tubería) [mca]', (fp.h_loss_pipe * barToMca / barToMca).toFixed(3), (lp.h_loss_pipe * 1).toFixed(3)],
+            ['h_k succión (accesorios) [mca]', (fp.h_loss_fittings || 0).toFixed(3), (lp.h_loss_fittings || 0).toFixed(3)],
+            ['h válvula [mca]', (fp.h_loss_valve || 0).toFixed(3), (lp.h_loss_valve || 0).toFixed(3)],
+            ['P succión [mca man.]', (fp.pressure_suction_bar * barToMca).toFixed(3), (lp.pressure_suction_bar * barToMca).toFixed(3)],
+            ['TDH bomba [m]', (fp.pump_head_m || 0).toFixed(2), (lp.pump_head_m || 0).toFixed(2)],
+            ['ΔP descarga [mca]', (fp.dp_discharge * barToMca).toFixed(3), (lp.dp_discharge * barToMca).toFixed(3)],
+            ['Potencia [kW]', (fp.pump_power_kw || 0).toFixed(2), (lp.pump_power_kw || 0).toFixed(2)],
+            ['NPSHa [m]', fp.npsh_a.toFixed(3), lp.npsh_a.toFixed(3)],
+            ['NPSHr [m]', fp.npsh_r.toFixed(3), lp.npsh_r.toFixed(3)],
+            ['Margen NPSHa/NPSHr', (fp.npsh_a / Math.max(0.01, fp.npsh_r)).toFixed(2), (lp.npsh_a / Math.max(0.01, lp.npsh_r)).toFixed(2)],
+            ['Diagnóstico', fp.alarm ? 'ALARMA' : 'OK', lp.alarm ? 'ALARMA' : 'OK']
+        ];
+
+        doc.autoTable({
+            startY: yPos,
+            head: [['Parámetro', 'Punto Inicial', 'Punto Final']],
+            body: balanceData,
+            theme: 'grid',
+            headStyles: { fillColor: [45, 45, 60], fontSize: 8, halign: 'center' },
+            bodyStyles: { fontSize: 7 },
+            columnStyles: { 0: { cellWidth: 65 }, 1: { cellWidth: 40, halign: 'center' }, 2: { cellWidth: 40, halign: 'center' } },
+            margin: { left: 15 },
+            tableWidth: 145
         });
 
         // === PIE DE PÁGINA ===
@@ -610,7 +751,7 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             scales: {
                 x: {
-                    title: { display: true, text: 'Tiempo (s)', color: COLORS.textSecondary },
+                    title: { display: true, text: 'Tiempo (min)', color: COLORS.textSecondary },
                     grid: { color: '#333' },
                     ticks: { color: COLORS.textSecondary }
                 },
@@ -792,24 +933,36 @@ document.addEventListener('DOMContentLoaded', () => {
             data.pump_npshr = [data.npshr1, data.npshr2, data.npshr3, data.npshr4, data.npshr5].map(Number);
         }
 
-        // Agregar accesorios
+        // Margen de seguridad NPSH
+        data.npsh_margin = parseFloat(data.npsh_margin) || 1.2;
+
+        // Agregar accesorios succión
         data.accessories = {
-            elbow90: document.getElementById('input_elbow90').value,
-            elbow45: document.getElementById('input_elbow45').value,
-            tee: document.getElementById('input_tee').value,
+            entrada_tipo: document.getElementById('suc_entrada_tipo').value,
+            elbow90_rl: form.acc_elbow90_rl && form.acc_elbow90_rl.checked ? parseInt(document.getElementById('input_elbow90').value) || 0 : 0,
+            elbow90_rc: form.acc_elbow90_rc && form.acc_elbow90_rc.checked ? parseInt(document.getElementById('input_elbow90_rc').value) || 0 : 0,
+            elbow45: form.acc_elbow45 && form.acc_elbow45.checked ? parseInt(document.getElementById('input_elbow45').value) || 0 : 0,
+            tee_directo: form.acc_tee_directo && form.acc_tee_directo.checked ? parseInt(document.getElementById('input_tee_directo').value) || 0 : 0,
+            tee_ramal: form.acc_tee_ramal && form.acc_tee_ramal.checked ? parseInt(document.getElementById('input_tee_ramal').value) || 0 : 0,
             filter: form.acc_filter.checked,
             reduction: form.acc_reduction.checked,
             expansion: form.acc_expansion ? form.acc_expansion.checked : false
         };
 
-        // Agregar línea de descarga
+        // Agregar línea de descarga con accesorios ampliados
         data.discharge = {
             pipe_size: data.discharge_pipe_size,
             length: parseFloat(data.discharge_length) || 20,
             height: parseFloat(data.discharge_height) || 10,
             pressure: parseFloat(data.discharge_pressure) || 2,
-            elbow90: parseInt(data.discharge_elbow90) || 2,
-            check_valve: parseInt(data.discharge_check_valve) || 1
+            elbow90_rl: form.dis_elbow90_rl && form.dis_elbow90_rl.checked ? parseInt(document.getElementById('input_dis_elbow90').value) || 0 : 0,
+            elbow90_rc: form.dis_elbow90_rc && form.dis_elbow90_rc.checked ? parseInt(document.getElementById('input_dis_elbow90_rc').value) || 0 : 0,
+            elbow45: form.dis_elbow45 && form.dis_elbow45.checked ? parseInt(document.getElementById('input_dis_elbow45').value) || 0 : 0,
+            tee_directo: form.dis_tee_directo && form.dis_tee_directo.checked ? parseInt(document.getElementById('input_dis_tee_directo').value) || 0 : 0,
+            tee_ramal: form.dis_tee_ramal && form.dis_tee_ramal.checked ? parseInt(document.getElementById('input_dis_tee_ramal').value) || 0 : 0,
+            check_valve: form.dis_check_valve && form.dis_check_valve.checked ? 1 : 0,
+            check_type: document.getElementById('input_dis_check_type').value || 'CHECK_SWING',
+            salida: form.dis_salida && form.dis_salida.checked ? 1 : 0
         };
 
         try {
@@ -844,7 +997,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             document.getElementById('info-vol-total').textContent = volTotal.toFixed(2);
             document.getElementById('info-vol-initial').textContent = volInitial.toFixed(2);
-            document.getElementById('info-time').textContent = finalTime.toFixed(0);
+            document.getElementById('info-time').textContent = (finalTime / 60).toFixed(2);
 
             if (hasAlarm) {
                 document.getElementById('info-status').textContent = 'CAVITACIÓN';
@@ -892,23 +1045,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const maxVelocity = Math.max(...data.map(p => p.velocity_ms));
         const avgFlow = data.reduce((s, p) => s + p.flow_m3h, 0) / data.length;
 
-        // Obtener parámetros del formulario
+        // Obtener parámetros del formulario (K aproximados para resumen)
         const pipeStd = document.getElementById('pipe_standard')?.value || '--';
         const pipeSize = document.getElementById('pipe_size')?.value || '--';
-        const kAccSuc = document.getElementById('input_elbow90')?.value * 0.3
-                      + document.getElementById('input_elbow45')?.value * 0.2
-                      + document.getElementById('input_tee')?.value * 1.0
-                      + (form.acc_filter?.checked ? 2.0 : 0)
-                      + (form.acc_reduction?.checked ? 0.5 : 0)
-                      + (form.acc_expansion?.checked ? 0.2 : 0)
-                      + 0.5; // Entrada tanque
-        const kAccDesc = (parseInt(document.getElementById('discharge_elbow90')?.value) || 2) * 0.3
-                       + (parseInt(document.getElementById('discharge_check_valve')?.value) || 1) * 2.0;
+        const firstState = data[0] || {};
+        const kAccSuc = (firstState.h_loss_fittings || 0) > 0
+            ? ((firstState.h_loss_fittings || 0) / Math.max(0.001, (firstState.velocity_ms || 1) ** 2 / (2 * 9.81))).toFixed(2)
+            : '--';
+        const kAccDesc = '--';
 
         const rows = [
             ['Tubería Succión', `${pipeStd} ${pipeSize}`],
-            ['K total acc. succión', kAccSuc.toFixed(2)],
-            ['K total acc. descarga', kAccDesc.toFixed(2)],
+            ['K total acc. succión', kAccSuc],
+            ['K total acc. descarga', kAccDesc],
             ['Re promedio', avgReynolds.toFixed(0)],
             ['f Darcy promedio', avgFriction.toFixed(6)],
             ['Velocidad máx. suc.', `${maxVelocity.toFixed(2)} m/s`],
@@ -924,7 +1073,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === ACTUALIZAR GRÁFICO ===
     function updateChart(data, minLevel) {
-        const labels = data.map(p => p.time.toFixed(0));
+        const labels = data.map(p => (p.time / 60).toFixed(2));
         const levels = data.map(p => p.level);
         const minLine = data.map(() => minLevel || 0);
 
@@ -948,10 +1097,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Función para formatear ΔP (maneja negativos)
         function formatPressureDiff(dp, pSuc, pDest) {
-            if (dp < 0) {
-                return `${dp.toFixed(3)} <span style="font-size:0.8em; color:#ff9900;">(suc>desc)</span>`;
+            const dpMca = dp * 10.1972;
+            if (dpMca < 0) {
+                return `${dpMca.toFixed(3)} <span style="font-size:0.8em; color:#ff9900;">(suc>desc)</span>`;
             }
-            return dp.toFixed(3);
+            return dpMca.toFixed(3);
         }
 
         const step = Math.max(1, Math.floor(data.length / 25));
@@ -961,19 +1111,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const dpDiff = formatPressureDiff(p.pressure_diff_bar || 0, p.pressure_suction_bar, p.pressure_discharge_bar);
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${p.time.toFixed(0)}</td>
+                    <td>${(p.time / 60).toFixed(2)}</td>
                     <td>${p.level.toFixed(3)}</td>
                     <td>${p.volume.toFixed(2)}</td>
                     <td>${p.flow_m3h.toFixed(2)}</td>
                     <td class="${velStatus}">${p.velocity_ms.toFixed(2)}</td>
                     <td>${(p.reynolds || 0).toFixed(0)}</td>
                     <td>${p.flow_regime || '--'}</td>
-                    <td>${(p.dp_pipe || 0).toFixed(4)}</td>
-                    <td>${(p.dp_valve || 0).toFixed(4)}</td>
-                    <td>${p.pressure_suction_bar.toFixed(3)}</td>
+                    <td>${((p.dp_pipe || 0) * 10.1972).toFixed(3)}</td>
+                    <td>${((p.dp_valve || 0) * 10.1972).toFixed(3)}</td>
+                    <td>${(p.pressure_suction_bar * 10.1972).toFixed(3)}</td>
                     <td>${p.npsh_a.toFixed(2)}</td>
                     <td>${p.npsh_r.toFixed(2)}</td>
-                    <td>${(p.dp_discharge || 0).toFixed(4)}</td>
+                    <td>${((p.dp_discharge || 0) * 10.1972).toFixed(3)}</td>
                     <td>${(p.pump_head_m || 0).toFixed(2)}</td>
                     <td>${(p.pump_power_kw || 0).toFixed(2)}</td>
                     <td>${dpDiff}</td>
@@ -993,11 +1143,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateValveTable(p) {
         const valveBody = document.getElementById('valve-table-body');
         if (!valveBody || !p) return;
-        const condition = (p.dp_valve || 0) > 0.5 ? 'Alta ΔP' : 'Normal';
+        const dpMca = (p.dp_valve || 0) * 10.1972;
+        const condition = dpMca > 5.0 ? 'Alta ΔP' : 'Normal';
         valveBody.innerHTML = `
             <tr>
                 <td>${(p.cv || 0).toFixed(1)}</td>
-                <td>${(p.dp_valve || 0).toFixed(4)}</td>
+                <td>${dpMca.toFixed(3)}</td>
                 <td>${p.flow_m3h.toFixed(2)}</td>
                 <td>${condition}</td>
             </tr>
@@ -1053,7 +1204,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (infoVolInitial) infoVolInitial.textContent = currentState.volume.toFixed(2);
 
                 // Actualizar tiempo transcurrido
-                if (infoTime) infoTime.textContent = currentState.time.toFixed(0);
+                if (infoTime) infoTime.textContent = (currentState.time / 60).toFixed(2);
 
                 // Actualizar tabla de válvula con datos del frame actual
                 updateValveTable(currentState);
@@ -1143,11 +1294,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const pipeW = Math.floor(14 * scale);
         const elbowR = Math.floor(30 * scale);
 
-        // Posiciones responsivas
-        const tankX = paddingX;
+        // Calcular ancho total del sistema para centrar
+        // Distancia horizontal desde centro del tanque hasta el destino:
+        // codo(elbowR) + filtro(60) + reducción(50) + bomba_in(50) + bomba_out(65) + desc(50) + codo(elbowR)
+        const pipeRunWidth = elbowR + Math.floor(60 * scale) + Math.floor(50 * scale)
+            + Math.floor(50 * scale) + Math.floor(65 * scale) + Math.floor(50 * scale) + elbowR;
+        // Ancho total = medio tanque izq + medio tanque (centro nozzle) + run horizontal + gap + tagZone
+        const totalSystemWidth = tankW / 2 + pipeRunWidth + Math.floor(30 * scale) + tagZoneW;
+        const offsetX = Math.max(0, Math.floor((W - totalSystemWidth) / 2));
+
+        // Posiciones responsivas (centradas)
+        const tankX = offsetX;
         const tankY = Math.floor(40 * scale);
         const horizontalY = tankY + tankH + 2 * headH + Math.floor(120 * scale);
-        const tagZoneX = W - tagZoneW - 10;
+        const tagZoneX = offsetX + totalSystemWidth - tagZoneW;
 
         // === PUNTOS DEL SISTEMA ===
 
@@ -1260,7 +1420,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 title: 'Válvula',
                 rows: [
                     { label: 'Apertura', value: `${valveOpen}%`, color: valveOpen > 20 ? '#00ff88' : '#ff4444' },
-                    { label: 'ΔP', value: `${(state.dp_valve || 0).toFixed(2)} bar` }
+                    { label: 'ΔP', value: `${((state.dp_valve || 0) * 10.1972).toFixed(2)} mca` }
                 ]
             },
             {
@@ -1291,14 +1451,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     { label: 'Caudal', value: `${(state.flow_m3h || 0).toFixed(1)} m³/h` },
                     { label: 'Re', value: `${(state.reynolds || 0).toFixed(0)}` },
                     { label: 'Régimen', value: state.flow_regime || '--', color: state.flow_regime === 'Turbulento' ? '#00ff88' : state.flow_regime === 'Laminar' ? '#ffaa00' : '#ff9900' },
-                    { label: 'P desc', value: `${(state.pressure_discharge_bar || 0).toFixed(2)} bar` }
+                    { label: 'P desc', value: `${((state.pressure_discharge_bar || 0) * 10.1972).toFixed(2)} mca` }
                 ]
             },
             {
                 tag: 'TI-001',
                 title: 'Tiempo Real',
                 rows: [
-                    { label: 'Tiempo', value: `${state.time.toFixed(0)} s`, color: COLORS.accent },
+                    { label: 'Tiempo', value: `${(state.time / 60).toFixed(2)} min`, color: COLORS.accent },
                     { label: 'Nivel', value: `${state.level.toFixed(2)} m` },
                     { label: 'Volumen', value: `${state.volume.toFixed(2)} m³` },
                     { label: 'Vaciado', value: `${((1 - state.volume / tankMeta.vol_total) * 100).toFixed(1)} %` }
@@ -1895,11 +2055,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         ctx.fillStyle = isAlarm ? COLORS.danger : COLORS.success;
         ctx.font = `bold ${Math.floor(12 * scale)}px Consolas`;
-        ctx.fillText('P-001 - Bomba Centrifuga', panelX + Math.floor(10 * scale), panelY + Math.floor(18 * scale));
+        const pumpTypeEl = document.getElementById('pump_type');
+        const pumpLabel = pumpTypeEl && pumpTypeEl.value === 'desplazamiento'
+            ? 'P-001 - Bomba Desplaz. Positivo'
+            : 'P-001 - Bomba Centrífuga';
+        ctx.fillText(pumpLabel, panelX + Math.floor(10 * scale), panelY + Math.floor(18 * scale));
 
         ctx.fillStyle = COLORS.text;
         ctx.font = `${Math.floor(11 * scale)}px Consolas`;
-        ctx.fillText(`P suc: ${state.pressure_suction_bar.toFixed(4)} bar`, panelX + Math.floor(10 * scale), panelY + Math.floor(36 * scale));
+        ctx.fillText(`P suc: ${(state.pressure_suction_bar * 10.1972).toFixed(3)} mca`, panelX + Math.floor(10 * scale), panelY + Math.floor(36 * scale));
         ctx.fillText(`NPSHa: ${state.npsh_a.toFixed(2)} m`, panelX + Math.floor(10 * scale), panelY + Math.floor(52 * scale));
         ctx.fillText(`NPSHr: ${state.npsh_r.toFixed(2)} m`, panelX + Math.floor(10 * scale), panelY + Math.floor(68 * scale));
 
