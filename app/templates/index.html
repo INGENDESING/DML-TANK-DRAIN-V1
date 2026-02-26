@@ -22,138 +22,14 @@
                 <img src="{{ url_for('static', filename='img/LOGO DML INGENIEROS.png') }}" alt="DML Logo"
                     class="brand-logo">
                 <h1 class="brand-title">Simulador de Vaciado de Tanques</h1>
-                <span class="brand-version">v3.0 — 2026-02-25</span>
+                <span class="brand-version">v3.1 — 2026-02-26</span>
             </div>
         </header>
 
         <!-- Main Content -->
         <main class="main-content">
             <div class="dashboard-grid">
-                <!-- Left Column: Visualization (GA1) and Graphs -->
-                <div class="visual-column">
-                    <!-- GA1: Gráfica Animada -->
-                    <div class="win-card" id="ga1-container">
-                        <div class="card-header">
-                            <h2 class="card-title">GA1: Dinámica del Sistema</h2>
-                            <div class="ga1-controls">
-                                <label for="valve-slider">Apertura Válvula: <span id="valve-display">100</span>%</label>
-                                <input type="range" id="valve-slider" min="0" max="100" value="100">
-                            </div>
-                        </div>
-                        <div class="canvas-container">
-                            <canvas id="ga1-canvas"></canvas>
-                        </div>
-                        <!-- Panel de Información de Simulación -->
-                        <div class="sim-info-panel"
-                            style="display: flex; gap: 15px; margin-top: 10px; padding: 10px; background: rgba(20, 25, 40, 0.8); border-radius: 8px; border: 1px solid rgba(96, 205, 255, 0.3);">
-                            <div style="flex: 1;">
-                                <small style="color: #9ca3af;">Volumen Total</small>
-                                <div style="color: #60cfff; font-size: 16px;"><span id="info-vol-total">--</span> m³
-                                </div>
-                            </div>
-                            <div style="flex: 1;">
-                                <small style="color: #9ca3af;">Volumen Actual</small>
-                                <div style="color: #60cfff; font-size: 16px;"><span id="info-vol-initial">--</span> m³
-                                </div>
-                            </div>
-                            <div style="flex: 1;">
-                                <small style="color: #9ca3af;">Tiempo de Vaciado</small>
-                                <div style="color: #00ff88; font-size: 16px;"><span id="info-time">--</span> min</div>
-                            </div>
-                            <div style="flex: 1;">
-                                <small style="color: #9ca3af;">Estado Final</small>
-                                <div style="color: #ffaa00; font-size: 14px;"><span id="info-status">--</span></div>
-                            </div>
-                        </div>
-                        <!-- Alarma de cavitación -->
-                        <div id="alarm-box" class="alarm-hidden">
-                            <strong>ALARMA: CAVITACIÓN</strong>
-                            <p>NPSHa &lt; 1.2 × NPSHr - Bomba detenida</p>
-                            <p>Volumen final: <span id="alarm-volume">0</span> m³ (<span id="alarm-percent">0</span>%)
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Gráfica Nivel vs Tiempo -->
-                    <div class="win-card">
-                        <div class="card-header">
-                            <h2 class="card-title">Nivel del Tanque vs Tiempo</h2>
-                        </div>
-                        <canvas id="levelChart"></canvas>
-                    </div>
-
-                    <!-- Gráfica Caudal vs TDH -->
-                    <div class="win-card">
-                        <div class="card-header">
-                            <h2 class="card-title">Caudal vs TDH (Punto de Operación)</h2>
-                        </div>
-                        <div style="position: relative; height: 300px;">
-                            <canvas id="pumpChart"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- Tabla de Válvula -->
-                    <div class="win-card">
-                        <div class="card-header">
-                            <h2 class="card-title">Datos de Válvula</h2>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Cv</th>
-                                        <th>ΔP (mca)</th>
-                                        <th>Q (m³/h)</th>
-                                        <th>Condición</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="valve-table-body">
-                                    <tr>
-                                        <td colspan="4">Ejecute simulación</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Tabla de Resultados Completa -->
-                    <div class="win-card">
-                        <div class="card-header">
-                            <h2 class="card-title">Resultados de Simulación</h2>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>t (min)</th>
-                                        <th>Nivel (m)</th>
-                                        <th>Vol (m³)</th>
-                                        <th>Q (m³/h)</th>
-                                        <th>v (m/s)</th>
-                                        <th>Re</th>
-                                        <th>Régimen</th>
-                                        <th>ΔP suc (mca)</th>
-                                        <th>ΔP valv (mca)</th>
-                                        <th>P suc (mca)</th>
-                                        <th>NPSHa</th>
-                                        <th>NPSHr</th>
-                                        <th>ΔP desc (mca)</th>
-                                        <th>TDH (m)</th>
-                                        <th>Pot (kW)</th>
-                                        <th>ΔP (mca)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="results-body">
-                                    <tr>
-                                        <td colspan="16">Ejecute simulación</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right Column: Control Panel & Inputs -->
+                <!-- Left Column: Control Panel & Inputs -->
                 <div class="input-column">
                     <div class="win-card">
                         <div class="card-header">
@@ -592,6 +468,130 @@
                         <div style="padding: 10px; font-size: 13px;">
                             <table class="data-table">
                                 <tbody id="hydraulic-summary-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Visualization (GA1) and Graphs -->
+                <div class="visual-column">
+                    <!-- GA1: Gráfica Animada -->
+                    <div class="win-card" id="ga1-container">
+                        <div class="card-header">
+                            <h2 class="card-title">GA1: Dinámica del Sistema</h2>
+                            <div class="ga1-controls">
+                                <label for="valve-slider">Apertura Válvula: <span id="valve-display">100</span>%</label>
+                                <input type="range" id="valve-slider" min="0" max="100" value="100">
+                            </div>
+                        </div>
+                        <div class="canvas-container">
+                            <canvas id="ga1-canvas"></canvas>
+                        </div>
+                        <!-- Panel de Información de Simulación -->
+                        <div class="sim-info-panel"
+                            style="display: flex; gap: 15px; margin-top: 10px; padding: 10px; background: rgba(20, 25, 40, 0.8); border-radius: 8px; border: 1px solid rgba(96, 205, 255, 0.3);">
+                            <div style="flex: 1;">
+                                <small style="color: #9ca3af;">Volumen Total</small>
+                                <div style="color: #60cfff; font-size: 16px;"><span id="info-vol-total">--</span> m³
+                                </div>
+                            </div>
+                            <div style="flex: 1;">
+                                <small style="color: #9ca3af;">Volumen Actual</small>
+                                <div style="color: #60cfff; font-size: 16px;"><span id="info-vol-initial">--</span> m³
+                                </div>
+                            </div>
+                            <div style="flex: 1;">
+                                <small style="color: #9ca3af;">Tiempo de Vaciado</small>
+                                <div style="color: #00ff88; font-size: 16px;"><span id="info-time">--</span> min</div>
+                            </div>
+                            <div style="flex: 1;">
+                                <small style="color: #9ca3af;">Estado Final</small>
+                                <div style="color: #ffaa00; font-size: 14px;"><span id="info-status">--</span></div>
+                            </div>
+                        </div>
+                        <!-- Alarma de cavitación -->
+                        <div id="alarm-box" class="alarm-hidden">
+                            <strong>ALARMA: CAVITACIÓN</strong>
+                            <p>NPSHa &lt; 1.2 × NPSHr - Bomba detenida</p>
+                            <p>Volumen final: <span id="alarm-volume">0</span> m³ (<span id="alarm-percent">0</span>%)
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Gráfica Nivel vs Tiempo -->
+                    <div class="win-card">
+                        <div class="card-header">
+                            <h2 class="card-title">Nivel del Tanque vs Tiempo</h2>
+                        </div>
+                        <canvas id="levelChart"></canvas>
+                    </div>
+
+                    <!-- Gráfica Caudal vs TDH -->
+                    <div class="win-card">
+                        <div class="card-header">
+                            <h2 class="card-title">Caudal vs TDH (Punto de Operación)</h2>
+                        </div>
+                        <div style="position: relative; height: 300px;">
+                            <canvas id="pumpChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Válvula -->
+                    <div class="win-card">
+                        <div class="card-header">
+                            <h2 class="card-title">Datos de Válvula</h2>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Cv</th>
+                                        <th>ΔP (mca)</th>
+                                        <th>Q (m³/h)</th>
+                                        <th>Condición</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="valve-table-body">
+                                    <tr>
+                                        <td colspan="4">Ejecute simulación</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Resultados Completa -->
+                    <div class="win-card">
+                        <div class="card-header">
+                            <h2 class="card-title">Resultados de Simulación</h2>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>t (min)</th>
+                                        <th>Nivel (m)</th>
+                                        <th>Vol (m³)</th>
+                                        <th>Q (m³/h)</th>
+                                        <th>v (m/s)</th>
+                                        <th>Re</th>
+                                        <th>Régimen</th>
+                                        <th>ΔP suc (mca)</th>
+                                        <th>ΔP valv (mca)</th>
+                                        <th>P suc (mca)</th>
+                                        <th>NPSHa</th>
+                                        <th>NPSHr</th>
+                                        <th>ΔP desc (mca)</th>
+                                        <th>TDH (m)</th>
+                                        <th>Pot (kW)</th>
+                                        <th>ΔP (mca)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="results-body">
+                                    <tr>
+                                        <td colspan="16">Ejecute simulación</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
